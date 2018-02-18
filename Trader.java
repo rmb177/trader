@@ -62,7 +62,7 @@ import javax.swing.table.AbstractTableModel;
 
 public class Trader
 {
-    private final static boolean TESTING = false;
+    private final static boolean TESTING = true;
 
     private final static double MIN_USD = 10.00;
     private final static double MIN_BTC = 0.001;
@@ -759,7 +759,7 @@ private static final double MAX_HIGH_BID_REACHED_BEFORE_CANCELING_LONE_BUY_ORDER
     private static void runTestForMultipleOpenBuysFromExchange()
     {
         setupTest();
-
+        setupTestAccountService(new double[] {});
 
         mAccountService = new TestAccountService(null);
         mMarketDataService = new TestMarketDataService(new ArrayList<OrderItem>(), new ArrayList<OrderItem>());
@@ -785,8 +785,9 @@ private static final double MAX_HIGH_BID_REACHED_BEFORE_CANCELING_LONE_BUY_ORDER
     private static void runTestForDifferentBuyOrderFromExchange()
     {
         setupTest();
+        setupTestAccountService(new double[] {});
 
-        mAccountService = new TestAccountService(null);
+
         mMarketDataService = new TestMarketDataService(new ArrayList<OrderItem>(), new ArrayList<OrderItem>());
 
         mCurrentBuyOrder = new NewLimitOrderSingle();
@@ -813,8 +814,8 @@ private static final double MAX_HIGH_BID_REACHED_BEFORE_CANCELING_LONE_BUY_ORDER
     private static void runTestForOneOpenBuyOrderFromExchange()
     {
         setupTest();
-
-        mAccountService = new TestAccountService(null);
+        setupTestAccountService(new double[] {});
+        
         mMarketDataService = new TestMarketDataService(new ArrayList<OrderItem>(), new ArrayList<OrderItem>());
 
         ArrayList<Order> orders = new ArrayList<Order>();
@@ -837,9 +838,8 @@ private static final double MAX_HIGH_BID_REACHED_BEFORE_CANCELING_LONE_BUY_ORDER
     private static void runTestSortingSellOrdersAppropriatelyAtStartup()
     {
         setupTest();
-
-
-        mAccountService = new TestAccountService(null);
+        setupTestAccountService(new double[] {});
+        
         mMarketDataService = new TestMarketDataService(new ArrayList<OrderItem>(), new ArrayList<OrderItem>());
 
         Order order1 = new Order();
@@ -878,14 +878,7 @@ private static final double MAX_HIGH_BID_REACHED_BEFORE_CANCELING_LONE_BUY_ORDER
     private static void runTestForSeriesOfBuysUsingPricesOfPreviousOrdersToDriveNewLimits()
     {
         setupTest();
-
-        List<BigDecimal> balances = new ArrayList<BigDecimal>();
-        balances.add(new BigDecimal(480.00));
-        balances.add(new BigDecimal(384.00));
-        balances.add(new BigDecimal(307.20));
-        balances.add(new BigDecimal(245.76));
-
-        mAccountService = new TestAccountService(balances);
+        setupTestAccountService(new double[] {480.00, 384.00, 307.20, 245.76});
 
         OrderItem bid1 = new OrderItem();
         bid1.setPrice(new BigDecimal("8911"));
@@ -975,15 +968,8 @@ private static final double MAX_HIGH_BID_REACHED_BEFORE_CANCELING_LONE_BUY_ORDER
     private static void runTestForSeriesOfBuysUsingMarketPricesToDriveNewLimits()
     {
         setupTest();
+        setupTestAccountService(new double[] {480.00, 384.00, 307.20, 245.76});
 
-
-        List<BigDecimal> balances = new ArrayList<BigDecimal>();
-        balances.add(new BigDecimal(480.00));
-        balances.add(new BigDecimal(384.00));
-        balances.add(new BigDecimal(307.20));
-        balances.add(new BigDecimal(245.76));
-
-        mAccountService = new TestAccountService(balances);
 
         OrderItem bid1 = new OrderItem();
         bid1.setPrice(new BigDecimal("8900"));
@@ -1073,9 +1059,8 @@ private static final double MAX_HIGH_BID_REACHED_BEFORE_CANCELING_LONE_BUY_ORDER
     private static void runTestForInitialBuyAfterOnePercentDropFromHighestPriceSeen()
     {
         setupTest();
-        
-        mAccountService = new TestAccountService(null);
-
+        setupTestAccountService(new double[] {});
+                
         OrderItem bid1 = new OrderItem();
         bid1.setPrice(new BigDecimal("8700"));
         OrderItem bid2 = new OrderItem();
@@ -1106,14 +1091,7 @@ private static final double MAX_HIGH_BID_REACHED_BEFORE_CANCELING_LONE_BUY_ORDER
     private static void runTestForSeriesOfBuysThenASellUsingPricesOfPreviousOrdersToDriveNewLimits()
     {
         setupTest();
-
-
-        List<BigDecimal> balances = new ArrayList<BigDecimal>();
-        balances.add(new BigDecimal(480.00));
-        balances.add(new BigDecimal(580.00));
-        balances.add(new BigDecimal(580.00));
-
-        mAccountService = new TestAccountService(balances);
+        setupTestAccountService(new double[] {480.00, 580.00, 580.00});
 
         OrderItem bid1 = new OrderItem();
         bid1.setPrice(new BigDecimal("8911"));
@@ -1168,15 +1146,8 @@ private static final double MAX_HIGH_BID_REACHED_BEFORE_CANCELING_LONE_BUY_ORDER
     private static void runTestForSeriesOfBuysThenASellUsingMarketPricesToDriveNewLimits()
     {
         setupTest();
-
-
-        List<BigDecimal> balances = new ArrayList<BigDecimal>();
-        balances.add(new BigDecimal(480.00));
-        balances.add(new BigDecimal(580.00));
-        balances.add(new BigDecimal(580.00));
-
-        mAccountService = new TestAccountService(balances);
-
+        setupTestAccountService(new double[] {480.00, 580.00, 580.00});
+        
         OrderItem bid1 = new OrderItem();
         bid1.setPrice(new BigDecimal("8911"));
         OrderItem bid2 = new OrderItem();
@@ -1231,13 +1202,8 @@ private static final double MAX_HIGH_BID_REACHED_BEFORE_CANCELING_LONE_BUY_ORDER
     private static void runTestForNotEnoughBitcoinsInOrder()
     {
         setupTest();
+        setupTestAccountService(new double[] {150.00, 150.00, 150.00});
 
-        List<BigDecimal> balances = new ArrayList<BigDecimal>();
-        balances.add(new BigDecimal(150.00));
-        balances.add(new BigDecimal(150.00));
-        balances.add(new BigDecimal(150.00));
-
-        mAccountService = new TestAccountService(balances);
 
         OrderItem bid1 = new OrderItem();
         bid1.setPrice(new BigDecimal("35000"));
@@ -1265,13 +1231,7 @@ private static final double MAX_HIGH_BID_REACHED_BEFORE_CANCELING_LONE_BUY_ORDER
     private static void runTestForNotEnoughCash()
     {
         setupTest();
-
-        List<BigDecimal> balances = new ArrayList<BigDecimal>();
-        balances.add(new BigDecimal(40.00));
-        balances.add(new BigDecimal(40.00));
-        balances.add(new BigDecimal(40.00));
-
-        mAccountService = new TestAccountService(balances);
+        setupTestAccountService(new double[] {40.00, 40.00, 40.00});
 
         OrderItem bid1 = new OrderItem();
         bid1.setPrice(new BigDecimal("1000"));
@@ -1299,8 +1259,8 @@ private static final double MAX_HIGH_BID_REACHED_BEFORE_CANCELING_LONE_BUY_ORDER
     private static void runTestForCancelingBuyAfterRunUp()
     {
         setupTest();
+        setupTestAccountService(new double[] {});
         
-        mAccountService = new TestAccountService(null);
 
         OrderItem bid1 = new OrderItem();
         bid1.setPrice(new BigDecimal("8700"));
@@ -1346,13 +1306,7 @@ private static final double MAX_HIGH_BID_REACHED_BEFORE_CANCELING_LONE_BUY_ORDER
     private static void runTestForTypicalSituation()
     {
         setupTest();
-
-        List<BigDecimal> balances = new ArrayList<BigDecimal>();
-        balances.add(new BigDecimal(480.00));
-        balances.add(new BigDecimal(480.00));
-        balances.add(new BigDecimal(384.00));
-
-        mAccountService = new TestAccountService(balances);
+        setupTestAccountService(new double[] {480.00, 480.00, 384.00});
 
         OrderItem bid1 = new OrderItem();
         bid1.setPrice(new BigDecimal("8900"));
@@ -1416,9 +1370,6 @@ private static final double MAX_HIGH_BID_REACHED_BEFORE_CANCELING_LONE_BUY_ORDER
     }
 
 
-
-
-
     private static void setupTest()
     {
         cleanFilledOrdersDir();
@@ -1429,6 +1380,18 @@ private static final double MAX_HIGH_BID_REACHED_BEFORE_CANCELING_LONE_BUY_ORDER
         mCurrentAsk = null;
         mCurrentBuyOrder = null;
         mLastFulfilledSell = null;
+    }
+
+
+
+    private static void setupTestAccountService(double[] balances)
+    {
+        List<BigDecimal> balanceList = new ArrayList<BigDecimal>();
+        for (int x = 0; x < balances.length; ++x)
+        {
+            balanceList.add(new BigDecimal(balances[x]));
+        }
+        mAccountService = new TestAccountService(balanceList);
     }
 
 
