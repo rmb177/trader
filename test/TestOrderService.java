@@ -56,6 +56,19 @@ public class TestOrderService implements OrderServiceInterface
         orders.remove(orders.size() - 1);
     }
 
+
+    // Testinf function to allow us to not fulfill buys
+    public void addBackBuyOrder(NewOrderSingle order)
+    {
+        NewLimitOrderSingle limitOrder = (NewLimitOrderSingle)order;
+        Order newOrder = new Order();
+        newOrder.setSize(limitOrder.getSize().toString());
+        newOrder.setId(String.valueOf(++id));
+        newOrder.setPrice(limitOrder.getPrice().toString());
+        newOrder.setStatus("pending");
+        newOrder.setSide(order.getSide());
+        orders.add(newOrder);
+    }
 }
 
 

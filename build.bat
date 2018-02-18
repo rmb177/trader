@@ -1,3 +1,4 @@
+cls
 javac -cp .;libs.jar com\coinbase\exchange\api\constants\*.java
 javac -cp .;libs.jar com\coinbase\exchange\api\exchange\*.java
 javac -cp .;libs.jar com\coinbase\exchange\api\entity\*.java

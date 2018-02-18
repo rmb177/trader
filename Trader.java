@@ -62,7 +62,7 @@ import javax.swing.table.AbstractTableModel;
 
 public class Trader
 {
-    private final static boolean TESTING = true;
+    private final static boolean TESTING = false;
 
     private final static double MIN_USD = 10.00;
     private final static double MIN_BTC = 0.001;
@@ -339,11 +339,11 @@ private static final double MAX_HIGH_BID_REACHED_BEFORE_CANCELING_LONE_BUY_ORDER
         throws IOException
     {
         List<Order> buyOrders = openOrders.stream().filter(order -> order.getSide().equals("buy")).collect(Collectors.toList());
-        if (mLastFulfilledSell != null)
+        if (mLastFulfilledSell != null && mCurrentBuyOrder != null && buyOrders.size() == 1)
         {
             clearBuyOrders(buyOrders);
         }
-        
+
         if (buyOrders.size() > 1)
         {
             mErrorLabel.setText("You have more than one buy order open!!");
@@ -361,8 +361,18 @@ private static final double MAX_HIGH_BID_REACHED_BEFORE_CANCELING_LONE_BUY_ORDER
             }
             else
             {
-                mCurrentBuyOrder = new NewLimitOrderSingle(buyOrders.get(0)); 
-                mBuyTableModel.setData(mCurrentBuyOrder);
+                if (mCurrentAsk != null &&
+                    mCurrentBuyOrder != null &&
+                        mCurrentAsk.doubleValue() >= 
+                        (mCurrentBuyOrder.getPrice().doubleValue() + (mCurrentBuyOrder.getPrice().doubleValue() * MAX_HIGH_BID_REACHED_BEFORE_CANCELING_LONE_BUY_ORDER)))
+                {
+                    clearBuyOrders(buyOrders);
+                }
+                else
+                { 
+                    mCurrentBuyOrder = new NewLimitOrderSingle(buyOrders.get(0)); 
+                    mBuyTableModel.setData(mCurrentBuyOrder);
+                }
             }
         }
         else if (buyOrders.size() == 0 && mOpenSellOrders.size() <= MAX_OPEN_SELL_ORDERS_TO_PROCESS_LOOP)
@@ -389,11 +399,12 @@ private static final double MAX_HIGH_BID_REACHED_BEFORE_CANCELING_LONE_BUY_ORDER
                     NewLimitOrderSingle[] tempSells = new NewLimitOrderSingle[mOpenSellOrders.size()];
                     mOpenSellOrders.copyInto(tempSells);
                     mSellTableModel.setData(tempSells);
-                  
+                
                     double buyTargetPrice = lastBuyPrice - (lastBuyPrice * targetBuyPercentages[mOpenSellOrders.size()]);
                     long buyLimitPrice = Math.round((Math.min(buyTargetPrice, mCurrentBid.doubleValue()) - 5));
                     double dollarAmount = mUSDAccount.getAvailable().doubleValue() * .2;
                     double buyOrderSize = dollarAmount / buyLimitPrice;
+
 
                     Order returnedBuyOrder = createOrder("buy", buyOrderSize, (int)buyLimitPrice); 
                     if (returnedBuyOrder != null && !returnedBuyOrder.getStatus().equals("rejected"))
@@ -487,6 +498,7 @@ private static final double MAX_HIGH_BID_REACHED_BEFORE_CANCELING_LONE_BUY_ORDER
             mOrderService.cancelOrder(order.getId());
         }
         mCurrentBuyOrder = null;
+        buyOrders.clear();
         mBuyTableModel.setData(mCurrentBuyOrder);
     }
 
@@ -537,13 +549,16 @@ private static final double MAX_HIGH_BID_REACHED_BEFORE_CANCELING_LONE_BUY_ORDER
             {
                 try
                 {
-                    PrintWriter writer = new PrintWriter("prev_sell_orders.txt", "UTF-8");
-                    for (int x = 0; x < mOpenSellOrders.size(); ++x)
+                    if (!TESTING)
                     {
-                        NewLimitOrderSingle order = mOpenSellOrders.pop();
-                        writer.println(order.getSize() + ":" + order.getPrice());
+                        PrintWriter writer = new PrintWriter("prev_sell_orders.txt", "UTF-8");
+                        for (int x = 0; x < mOpenSellOrders.size(); ++x)
+                        {
+                            NewLimitOrderSingle order = mOpenSellOrders.pop();
+                            writer.println(order.getSize() + ":" + order.getPrice());
+                        }
+                        writer.close();
                     }
-                    writer.close();
                 }
                 catch (Exception e)
                 {
@@ -736,14 +751,15 @@ private static final double MAX_HIGH_BID_REACHED_BEFORE_CANCELING_LONE_BUY_ORDER
         runTestForNotEnoughBitcoinsInOrder();
         runTestForNotEnoughCash();
         runTestForCancelingBuyAfterRunUp();
+        runTestForTypicalSituation();
     }
 
 
 
     private static void runTestForMultipleOpenBuysFromExchange()
     {
-        cleanFilledOrdersDir();
-        mOpenSellOrders.clear();
+        setupTest();
+
 
         mAccountService = new TestAccountService(null);
         mMarketDataService = new TestMarketDataService(new ArrayList<OrderItem>(), new ArrayList<OrderItem>());
@@ -768,8 +784,7 @@ private static final double MAX_HIGH_BID_REACHED_BEFORE_CANCELING_LONE_BUY_ORDER
 
     private static void runTestForDifferentBuyOrderFromExchange()
     {
-        cleanFilledOrdersDir();
-        mOpenSellOrders.clear();
+        setupTest();
 
         mAccountService = new TestAccountService(null);
         mMarketDataService = new TestMarketDataService(new ArrayList<OrderItem>(), new ArrayList<OrderItem>());
@@ -794,10 +809,10 @@ private static final double MAX_HIGH_BID_REACHED_BEFORE_CANCELING_LONE_BUY_ORDER
         assert(mCurrentBuyOrder == null);
     }
 
+
     private static void runTestForOneOpenBuyOrderFromExchange()
     {
-        cleanFilledOrdersDir();
-        mOpenSellOrders.clear();
+        setupTest();
 
         mAccountService = new TestAccountService(null);
         mMarketDataService = new TestMarketDataService(new ArrayList<OrderItem>(), new ArrayList<OrderItem>());
@@ -821,10 +836,8 @@ private static final double MAX_HIGH_BID_REACHED_BEFORE_CANCELING_LONE_BUY_ORDER
    
     private static void runTestSortingSellOrdersAppropriatelyAtStartup()
     {
-        cleanFilledOrdersDir();
-        mOpenSellOrders.clear();
+        setupTest();
 
-        mCurrentBuyOrder = null;
 
         mAccountService = new TestAccountService(null);
         mMarketDataService = new TestMarketDataService(new ArrayList<OrderItem>(), new ArrayList<OrderItem>());
@@ -864,8 +877,7 @@ private static final double MAX_HIGH_BID_REACHED_BEFORE_CANCELING_LONE_BUY_ORDER
 
     private static void runTestForSeriesOfBuysUsingPricesOfPreviousOrdersToDriveNewLimits()
     {
-        cleanFilledOrdersDir();
-        mOpenSellOrders.clear();
+        setupTest();
 
         List<BigDecimal> balances = new ArrayList<BigDecimal>();
         balances.add(new BigDecimal(480.00));
@@ -962,8 +974,8 @@ private static final double MAX_HIGH_BID_REACHED_BEFORE_CANCELING_LONE_BUY_ORDER
 
     private static void runTestForSeriesOfBuysUsingMarketPricesToDriveNewLimits()
     {
-        cleanFilledOrdersDir();
-        mOpenSellOrders.clear();
+        setupTest();
+
 
         List<BigDecimal> balances = new ArrayList<BigDecimal>();
         balances.add(new BigDecimal(480.00));
@@ -1060,14 +1072,8 @@ private static final double MAX_HIGH_BID_REACHED_BEFORE_CANCELING_LONE_BUY_ORDER
     
     private static void runTestForInitialBuyAfterOnePercentDropFromHighestPriceSeen()
     {
-        cleanFilledOrdersDir();
-        mOpenSellOrders.clear();
-
-        mCurrentBuyOrder = null;
-        mHighestBidSeen = null;
-        mCurrentBid = null;
-
-        cleanFilledOrdersDir();
+        setupTest();
+        
         mAccountService = new TestAccountService(null);
 
         OrderItem bid1 = new OrderItem();
@@ -1099,8 +1105,8 @@ private static final double MAX_HIGH_BID_REACHED_BEFORE_CANCELING_LONE_BUY_ORDER
 
     private static void runTestForSeriesOfBuysThenASellUsingPricesOfPreviousOrdersToDriveNewLimits()
     {
-        cleanFilledOrdersDir();
-        mOpenSellOrders.clear();
+        setupTest();
+
 
         List<BigDecimal> balances = new ArrayList<BigDecimal>();
         balances.add(new BigDecimal(480.00));
@@ -1143,12 +1149,15 @@ private static final double MAX_HIGH_BID_REACHED_BEFORE_CANCELING_LONE_BUY_ORDER
         runTestLoop(2);
 
         ((TestOrderService)mOrderService).fulfillLastSellOrder();
+        
+        // Add back buy order so we still have one open
+        ((TestOrderService)mOrderService).addBackBuyOrder(mCurrentBuyOrder);
 
         runTestLoop(1);
 
         assert(mOpenSellOrders.size() == 1);
-        assert(mOpenSellOrders.peek().getSize().doubleValue() == 0.01333);
         assert(mOpenSellOrders.peek().getPrice().doubleValue() == 9028);
+        assert(mOpenSellOrders.peek().getSize().doubleValue() == 0.01333);
 
         assert(mCurrentBuyOrder.getSize().doubleValue() == 0.01303);
         assert(mCurrentBuyOrder.getPrice().doubleValue() == 8900); 
@@ -1158,8 +1167,8 @@ private static final double MAX_HIGH_BID_REACHED_BEFORE_CANCELING_LONE_BUY_ORDER
 
     private static void runTestForSeriesOfBuysThenASellUsingMarketPricesToDriveNewLimits()
     {
-        cleanFilledOrdersDir();
-        mOpenSellOrders.clear();
+        setupTest();
+
 
         List<BigDecimal> balances = new ArrayList<BigDecimal>();
         balances.add(new BigDecimal(480.00));
@@ -1171,7 +1180,7 @@ private static final double MAX_HIGH_BID_REACHED_BEFORE_CANCELING_LONE_BUY_ORDER
         OrderItem bid1 = new OrderItem();
         bid1.setPrice(new BigDecimal("8911"));
         OrderItem bid2 = new OrderItem();
-        bid2.setPrice(new BigDecimal("8800"));
+        bid2.setPrice(new BigDecimal("8600"));
 
         List<OrderItem> bids = new ArrayList<OrderItem>();
         bids.add(bid1);
@@ -1203,28 +1212,25 @@ private static final double MAX_HIGH_BID_REACHED_BEFORE_CANCELING_LONE_BUY_ORDER
 
         ((TestOrderService)mOrderService).fulfillLastSellOrder();
 
+        // Add back buy order so we still have one open
+        ((TestOrderService)mOrderService).addBackBuyOrder(mCurrentBuyOrder);
+
+
         runTestLoop(1);
 
         assert(mOpenSellOrders.size() == 1);
         assert(mOpenSellOrders.peek().getSize().doubleValue() == 0.01333);
         assert(mOpenSellOrders.peek().getPrice().doubleValue() == 9028);
 
-        assert(mCurrentBuyOrder.getSize().doubleValue() == 0.01318);
-        assert(mCurrentBuyOrder.getPrice().doubleValue() == 8795); 
+        assert(mCurrentBuyOrder.getSize().doubleValue() == 0.01349);
+        assert(mCurrentBuyOrder.getPrice().doubleValue() == 8595); 
     }
 
 
 
     private static void runTestForNotEnoughBitcoinsInOrder()
     {
-        cleanFilledOrdersDir();
-        mOpenSellOrders.clear();
-
-        mCurrentBuyOrder = null;
-        mHighestBidSeen = null;
-        mCurrentBid = null;
-
-        cleanFilledOrdersDir();
+        setupTest();
 
         List<BigDecimal> balances = new ArrayList<BigDecimal>();
         balances.add(new BigDecimal(150.00));
@@ -1258,14 +1264,7 @@ private static final double MAX_HIGH_BID_REACHED_BEFORE_CANCELING_LONE_BUY_ORDER
 
     private static void runTestForNotEnoughCash()
     {
-        cleanFilledOrdersDir();
-        mOpenSellOrders.clear();
-
-        mCurrentBuyOrder = null;
-        mHighestBidSeen = null;
-        mCurrentBid = null;
-
-        cleanFilledOrdersDir();
+        setupTest();
 
         List<BigDecimal> balances = new ArrayList<BigDecimal>();
         balances.add(new BigDecimal(40.00));
@@ -1299,14 +1298,8 @@ private static final double MAX_HIGH_BID_REACHED_BEFORE_CANCELING_LONE_BUY_ORDER
 
     private static void runTestForCancelingBuyAfterRunUp()
     {
-        cleanFilledOrdersDir();
-        mOpenSellOrders.clear();
-
-        mCurrentBuyOrder = null;
-        mHighestBidSeen = null;
-        mCurrentBid = null;
-
-        cleanFilledOrdersDir();
+        setupTest();
+        
         mAccountService = new TestAccountService(null);
 
         OrderItem bid1 = new OrderItem();
@@ -1322,7 +1315,7 @@ private static final double MAX_HIGH_BID_REACHED_BEFORE_CANCELING_LONE_BUY_ORDER
         OrderItem ask1 = new OrderItem();
         ask1.setPrice(new BigDecimal("8701"));
         OrderItem ask2 = new OrderItem();
-        ask2.setPrice(new BigDecimal("8911"));
+        ask2.setPrice(new BigDecimal("8961"));
 
         List<OrderItem> asks = new ArrayList<OrderItem>();
         asks.add(ask1);
@@ -1335,23 +1328,108 @@ private static final double MAX_HIGH_BID_REACHED_BEFORE_CANCELING_LONE_BUY_ORDER
         order1.setSide("buy");
         order1.setSize("2");
         order1.setPrice("8700");
+        order1.setId("1");
         orders.add(order1);
         mOrderService = new TestOrderService(orders);
 
+        runTestLoop(1);
+        assert(mCurrentBuyOrder != null);
+
+
+        mCurrentBuyOrder = new NewLimitOrderSingle(order1);
+        runTestLoop(1);
+        assert(mCurrentBuyOrder == null);
+    }
+
+
+
+    private static void runTestForTypicalSituation()
+    {
+        setupTest();
+
+        List<BigDecimal> balances = new ArrayList<BigDecimal>();
+        balances.add(new BigDecimal(480.00));
+        balances.add(new BigDecimal(480.00));
+        balances.add(new BigDecimal(384.00));
+
+        mAccountService = new TestAccountService(balances);
+
+        OrderItem bid1 = new OrderItem();
+        bid1.setPrice(new BigDecimal("8900"));
+        OrderItem bid2 = new OrderItem();
+        bid2.setPrice(new BigDecimal("8900"));
+        OrderItem bid3 = new OrderItem();
+        bid3.setPrice(new BigDecimal("8700"));
+
+        List<OrderItem> bids = new ArrayList<OrderItem>();
+        bids.add(bid1);
+        bids.add(bid2);
+        bids.add(bid3);
+
+
+        OrderItem ask1 = new OrderItem();
+        ask1.setPrice(new BigDecimal("8949"));
+        OrderItem ask2 = new OrderItem();
+        ask2.setPrice(new BigDecimal("8949"));
+        OrderItem ask3 = new OrderItem();
+        ask3.setPrice(new BigDecimal("8701"));
+
+        List<OrderItem> asks = new ArrayList<OrderItem>();
+        asks.add(ask1);
+        asks.add(ask2);
+        asks.add(ask3);
+        
+        mMarketDataService = new TestMarketDataService(bids, asks);
+
+        NewLimitOrderSingle order1 = new NewLimitOrderSingle();
+        order1.setSide("buy");
+        order1.setSize(new BigDecimal(0.01333));
+        order1.setPrice(new BigDecimal(9000));
+        mCurrentBuyOrder = order1;
 
         mOrderService = new TestOrderService(new ArrayList<Order>());
 
-        runTestLoop(2);
+        runTestLoop(1);
 
+        assert(mOpenSellOrders.size() == 1);
+        assert(mOpenSellOrders.peek().getSize().doubleValue() == 0.01333);
+        assert(mOpenSellOrders.peek().getPrice().doubleValue() == 9028);
+
+        assert(mCurrentBuyOrder.getSize().doubleValue() == 0.01079);
+        assert(mCurrentBuyOrder.getPrice().doubleValue() == 8895);
+
+        
+        // Sell order goes through on server
+        ((TestOrderService)mOrderService).fulfillLastSellOrder();
+        ((TestOrderService)mOrderService).addBackBuyOrder(mCurrentBuyOrder);
+
+        runTestLoop(1);
+        assert(mOpenSellOrders.size() == 0);
         assert(mCurrentBuyOrder == null);
+
+
+        runTestLoop(1);
+        assert(mCurrentBuyOrder.getSize().doubleValue() == 0.00883);
+        assert(mCurrentBuyOrder.getPrice().doubleValue() == 8695);
+
+        
     }
 
 
 
 
 
-
-
+    private static void setupTest()
+    {
+        cleanFilledOrdersDir();
+        mOpenSellOrders.clear();
+        
+        mHighestBidSeen = null;
+        mCurrentBid = null;
+        mCurrentAsk = null;
+        mCurrentBuyOrder = null;
+        mLastFulfilledSell = null;
+    }
 
 
     private static void cleanFilledOrdersDir()
@@ -1370,4 +1448,3 @@ private static final double MAX_HIGH_BID_REACHED_BEFORE_CANCELING_LONE_BUY_ORDER
 		}
 	}
 }
-
