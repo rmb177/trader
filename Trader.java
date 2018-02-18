@@ -760,10 +760,8 @@ private static final double MAX_HIGH_BID_REACHED_BEFORE_CANCELING_LONE_BUY_ORDER
     {
         setupTest();
         setupTestAccountService(new double[] {});
-
-        mAccountService = new TestAccountService(null);
-        mMarketDataService = new TestMarketDataService(new ArrayList<OrderItem>(), new ArrayList<OrderItem>());
-
+        setupMarketDataService(new double[] {}, new double[] {});
+        
         ArrayList<Order> orders = new ArrayList<Order>();
         Order order1 = new Order();
         Order order2 = new Order();
@@ -786,10 +784,8 @@ private static final double MAX_HIGH_BID_REACHED_BEFORE_CANCELING_LONE_BUY_ORDER
     {
         setupTest();
         setupTestAccountService(new double[] {});
-
-
-        mMarketDataService = new TestMarketDataService(new ArrayList<OrderItem>(), new ArrayList<OrderItem>());
-
+        setupMarketDataService(new double[] {}, new double[] {});
+        
         mCurrentBuyOrder = new NewLimitOrderSingle();
         mCurrentBuyOrder.setSize(new BigDecimal(3));
         mCurrentBuyOrder.setPrice(new BigDecimal(2));
@@ -815,9 +811,8 @@ private static final double MAX_HIGH_BID_REACHED_BEFORE_CANCELING_LONE_BUY_ORDER
     {
         setupTest();
         setupTestAccountService(new double[] {});
+        setupMarketDataService(new double[] {}, new double[] {});
         
-        mMarketDataService = new TestMarketDataService(new ArrayList<OrderItem>(), new ArrayList<OrderItem>());
-
         ArrayList<Order> orders = new ArrayList<Order>();
         Order order1 = new Order();
         order1.setSide("buy");
@@ -839,9 +834,8 @@ private static final double MAX_HIGH_BID_REACHED_BEFORE_CANCELING_LONE_BUY_ORDER
     {
         setupTest();
         setupTestAccountService(new double[] {});
+        setupMarketDataService(new double[] {}, new double[] {});
         
-        mMarketDataService = new TestMarketDataService(new ArrayList<OrderItem>(), new ArrayList<OrderItem>());
-
         Order order1 = new Order();
         order1.setSide("sell");
         order1.setPrice("8200.00");
@@ -879,39 +873,7 @@ private static final double MAX_HIGH_BID_REACHED_BEFORE_CANCELING_LONE_BUY_ORDER
     {
         setupTest();
         setupTestAccountService(new double[] {480.00, 384.00, 307.20, 245.76});
-
-        OrderItem bid1 = new OrderItem();
-        bid1.setPrice(new BigDecimal("8911"));
-        OrderItem bid2 = new OrderItem();
-        bid2.setPrice(new BigDecimal("8727"));
-        OrderItem bid3 = new OrderItem();
-        bid3.setPrice(new BigDecimal("8461"));
-        OrderItem bid4 = new OrderItem();
-        bid4.setPrice(new BigDecimal("8117"));
-
-        List<OrderItem> bids = new ArrayList<OrderItem>();
-        bids.add(bid1);
-        bids.add(bid2);
-        bids.add(bid3);
-        bids.add(bid4);
-
-
-        OrderItem ask1 = new OrderItem();
-        ask1.setPrice(new BigDecimal("8949"));
-        OrderItem ask2 = new OrderItem();
-        ask2.setPrice(new BigDecimal("8949"));
-        OrderItem ask3 = new OrderItem();
-        ask3.setPrice(new BigDecimal("8809"));
-        OrderItem ask4 = new OrderItem();
-        ask4.setPrice(new BigDecimal("8624"));
-
-        List<OrderItem> asks = new ArrayList<OrderItem>();
-        asks.add(ask1);
-        asks.add(ask2);
-        asks.add(ask3);
-        asks.add(ask4);
-        
-        mMarketDataService = new TestMarketDataService(bids, asks);
+        setupMarketDataService(new double[] {8911, 8727, 8461, 8117}, new double[] {8949, 8949, 8809, 8624});
 
         NewLimitOrderSingle order1 = new NewLimitOrderSingle();
         order1.setSide("buy");
@@ -969,40 +931,7 @@ private static final double MAX_HIGH_BID_REACHED_BEFORE_CANCELING_LONE_BUY_ORDER
     {
         setupTest();
         setupTestAccountService(new double[] {480.00, 384.00, 307.20, 245.76});
-
-
-        OrderItem bid1 = new OrderItem();
-        bid1.setPrice(new BigDecimal("8900"));
-        OrderItem bid2 = new OrderItem();
-        bid2.setPrice(new BigDecimal("8700"));
-        OrderItem bid3 = new OrderItem();
-        bid3.setPrice(new BigDecimal("8400"));
-        OrderItem bid4 = new OrderItem();
-        bid4.setPrice(new BigDecimal("8000"));
-
-        List<OrderItem> bids = new ArrayList<OrderItem>();
-        bids.add(bid1);
-        bids.add(bid2);
-        bids.add(bid3);
-        bids.add(bid4);
-
-
-        OrderItem ask1 = new OrderItem();
-        ask1.setPrice(new BigDecimal("8949"));
-        OrderItem ask2 = new OrderItem();
-        ask2.setPrice(new BigDecimal("8949"));
-        OrderItem ask3 = new OrderItem();
-        ask3.setPrice(new BigDecimal("8810"));
-        OrderItem ask4 = new OrderItem();
-        ask4.setPrice(new BigDecimal("8624"));
-
-        List<OrderItem> asks = new ArrayList<OrderItem>();
-        asks.add(ask1);
-        asks.add(ask2);
-        asks.add(ask3);
-        asks.add(ask4);
-        
-        mMarketDataService = new TestMarketDataService(bids, asks);
+        setupMarketDataService(new double[] {8900, 8700, 8400, 8000}, new double[] {8949, 8949, 8810, 8624});
 
         NewLimitOrderSingle order1 = new NewLimitOrderSingle();
         order1.setSide("buy");
@@ -1060,21 +989,8 @@ private static final double MAX_HIGH_BID_REACHED_BEFORE_CANCELING_LONE_BUY_ORDER
     {
         setupTest();
         setupTestAccountService(new double[] {});
-                
-        OrderItem bid1 = new OrderItem();
-        bid1.setPrice(new BigDecimal("8700"));
-        OrderItem bid2 = new OrderItem();
-        bid2.setPrice(new BigDecimal("8675"));
-        OrderItem bid3 = new OrderItem();
-        bid3.setPrice(new BigDecimal("8650"));
-
-        List<OrderItem> bids = new ArrayList<OrderItem>();
-        bids.add(bid1);
-        bids.add(bid2);
-        bids.add(bid3);
-
-        mMarketDataService = new TestMarketDataService(bids, new ArrayList<OrderItem>());
-
+        setupMarketDataService(new double[] {8700, 8675, 8650}, new double[] {});
+        
         mOrderService = new TestOrderService(new ArrayList<Order>());
 
         runTestLoop(3);
@@ -1092,29 +1008,8 @@ private static final double MAX_HIGH_BID_REACHED_BEFORE_CANCELING_LONE_BUY_ORDER
     {
         setupTest();
         setupTestAccountService(new double[] {480.00, 580.00, 580.00});
-
-        OrderItem bid1 = new OrderItem();
-        bid1.setPrice(new BigDecimal("8911"));
-        OrderItem bid2 = new OrderItem();
-        bid2.setPrice(new BigDecimal("8906"));
-
-        List<OrderItem> bids = new ArrayList<OrderItem>();
-        bids.add(bid1);
-        bids.add(bid2);
-
-        OrderItem ask1 = new OrderItem();
-        ask1.setPrice(new BigDecimal("8949"));
-        OrderItem ask2 = new OrderItem();
-        ask2.setPrice(new BigDecimal("8949"));
-        OrderItem ask3 = new OrderItem();
-        ask3.setPrice(new BigDecimal("8988"));
-
-        List<OrderItem> asks = new ArrayList<OrderItem>();
-        asks.add(ask1);
-        asks.add(ask2);
-        asks.add(ask3);
+        setupMarketDataService(new double[] {8911, 8906}, new double[] {8949, 8949, 8988});
         
-        mMarketDataService = new TestMarketDataService(bids, asks);
 
         NewLimitOrderSingle order1 = new NewLimitOrderSingle();
         order1.setSide("buy");
@@ -1147,30 +1042,8 @@ private static final double MAX_HIGH_BID_REACHED_BEFORE_CANCELING_LONE_BUY_ORDER
     {
         setupTest();
         setupTestAccountService(new double[] {480.00, 580.00, 580.00});
+        setupMarketDataService(new double[] {8911, 8600}, new double[] {8949, 8949, 8988});
         
-        OrderItem bid1 = new OrderItem();
-        bid1.setPrice(new BigDecimal("8911"));
-        OrderItem bid2 = new OrderItem();
-        bid2.setPrice(new BigDecimal("8600"));
-
-        List<OrderItem> bids = new ArrayList<OrderItem>();
-        bids.add(bid1);
-        bids.add(bid2);
-
-        OrderItem ask1 = new OrderItem();
-        ask1.setPrice(new BigDecimal("8949"));
-        OrderItem ask2 = new OrderItem();
-        ask2.setPrice(new BigDecimal("8949"));
-        OrderItem ask3 = new OrderItem();
-        ask3.setPrice(new BigDecimal("8988"));
-
-        List<OrderItem> asks = new ArrayList<OrderItem>();
-        asks.add(ask1);
-        asks.add(ask2);
-        asks.add(ask3);
-        
-        mMarketDataService = new TestMarketDataService(bids, asks);
-
         NewLimitOrderSingle order1 = new NewLimitOrderSingle();
         order1.setSide("buy");
         order1.setSize(new BigDecimal(0.01333));
@@ -1203,21 +1076,8 @@ private static final double MAX_HIGH_BID_REACHED_BEFORE_CANCELING_LONE_BUY_ORDER
     {
         setupTest();
         setupTestAccountService(new double[] {150.00, 150.00, 150.00});
+        setupMarketDataService(new double[] {35000, 34999, 32000}, new double[] {});
 
-
-        OrderItem bid1 = new OrderItem();
-        bid1.setPrice(new BigDecimal("35000"));
-        OrderItem bid2 = new OrderItem();
-        bid2.setPrice(new BigDecimal("34999"));
-        OrderItem bid3 = new OrderItem();
-        bid3.setPrice(new BigDecimal("32000"));
-
-        List<OrderItem> bids = new ArrayList<OrderItem>();
-        bids.add(bid1);
-        bids.add(bid2);
-        bids.add(bid3);
-
-        mMarketDataService = new TestMarketDataService(bids, new ArrayList<OrderItem>());
 
         mOrderService = new TestOrderService(new ArrayList<Order>());
 
@@ -1232,21 +1092,8 @@ private static final double MAX_HIGH_BID_REACHED_BEFORE_CANCELING_LONE_BUY_ORDER
     {
         setupTest();
         setupTestAccountService(new double[] {40.00, 40.00, 40.00});
-
-        OrderItem bid1 = new OrderItem();
-        bid1.setPrice(new BigDecimal("1000"));
-        OrderItem bid2 = new OrderItem();
-        bid2.setPrice(new BigDecimal("999"));
-        OrderItem bid3 = new OrderItem();
-        bid3.setPrice(new BigDecimal("870"));
-
-        List<OrderItem> bids = new ArrayList<OrderItem>();
-        bids.add(bid1);
-        bids.add(bid2);
-        bids.add(bid3);
-
-        mMarketDataService = new TestMarketDataService(bids, new ArrayList<OrderItem>());
-
+        setupMarketDataService(new double[] {1000, 999, 870}, new double[] {});
+        
         mOrderService = new TestOrderService(new ArrayList<Order>());
 
         runTestLoop(3);
@@ -1260,29 +1107,8 @@ private static final double MAX_HIGH_BID_REACHED_BEFORE_CANCELING_LONE_BUY_ORDER
     {
         setupTest();
         setupTestAccountService(new double[] {});
+        setupMarketDataService(new double[] {8700, 8910}, new double[] {8701, 8961});
         
-
-        OrderItem bid1 = new OrderItem();
-        bid1.setPrice(new BigDecimal("8700"));
-        OrderItem bid2 = new OrderItem();
-        bid2.setPrice(new BigDecimal("8910"));
-
-        List<OrderItem> bids = new ArrayList<OrderItem>();
-        bids.add(bid1);
-        bids.add(bid2);
-
-
-        OrderItem ask1 = new OrderItem();
-        ask1.setPrice(new BigDecimal("8701"));
-        OrderItem ask2 = new OrderItem();
-        ask2.setPrice(new BigDecimal("8961"));
-
-        List<OrderItem> asks = new ArrayList<OrderItem>();
-        asks.add(ask1);
-        asks.add(ask2);
-
-        mMarketDataService = new TestMarketDataService(bids, asks);
-
         ArrayList<Order> orders = new ArrayList<Order>();
         Order order1 = new Order();
         order1.setSide("buy");
@@ -1307,33 +1133,7 @@ private static final double MAX_HIGH_BID_REACHED_BEFORE_CANCELING_LONE_BUY_ORDER
     {
         setupTest();
         setupTestAccountService(new double[] {480.00, 480.00, 384.00});
-
-        OrderItem bid1 = new OrderItem();
-        bid1.setPrice(new BigDecimal("8900"));
-        OrderItem bid2 = new OrderItem();
-        bid2.setPrice(new BigDecimal("8900"));
-        OrderItem bid3 = new OrderItem();
-        bid3.setPrice(new BigDecimal("8700"));
-
-        List<OrderItem> bids = new ArrayList<OrderItem>();
-        bids.add(bid1);
-        bids.add(bid2);
-        bids.add(bid3);
-
-
-        OrderItem ask1 = new OrderItem();
-        ask1.setPrice(new BigDecimal("8949"));
-        OrderItem ask2 = new OrderItem();
-        ask2.setPrice(new BigDecimal("8949"));
-        OrderItem ask3 = new OrderItem();
-        ask3.setPrice(new BigDecimal("8701"));
-
-        List<OrderItem> asks = new ArrayList<OrderItem>();
-        asks.add(ask1);
-        asks.add(ask2);
-        asks.add(ask3);
-        
-        mMarketDataService = new TestMarketDataService(bids, asks);
+        setupMarketDataService(new double[] {8900, 8900, 8700}, new double[] {8949, 8949, 8701});
 
         NewLimitOrderSingle order1 = new NewLimitOrderSingle();
         order1.setSide("buy");
@@ -1393,6 +1193,30 @@ private static final double MAX_HIGH_BID_REACHED_BEFORE_CANCELING_LONE_BUY_ORDER
         }
         mAccountService = new TestAccountService(balanceList);
     }
+
+
+    private static void setupMarketDataService(double[] bids, double[] asks)
+    {
+        List<OrderItem> asksList = new ArrayList<OrderItem>();
+        List<OrderItem> bidsList = new ArrayList<OrderItem>();
+
+        for (int x = 0; x < bids.length; ++x)
+        {
+            OrderItem bid = new OrderItem();
+            bid.setPrice(new BigDecimal(bids[x]));
+            bidsList.add(bid);
+        }
+
+        for (int x = 0; x < asks.length; ++x)
+        {
+            OrderItem ask = new OrderItem();
+            ask.setPrice(new BigDecimal(asks[x]));
+            asksList.add(ask);
+        }
+        
+        mMarketDataService = new TestMarketDataService(bidsList, asksList);
+    }
+
 
 
     private static void cleanFilledOrdersDir()
