@@ -96,8 +96,17 @@ public class Trader
     private static Stack<NewLimitOrderSingle> mOpenSellOrders = new Stack<NewLimitOrderSingle>();
 
 
-    private static boolean mSellOrderFilled = false;
+    private static NewLimitOrderSingle mLastFulfilledSell = null;
     private static boolean mDone;
+
+   
+    // Can only go up to 8 in loop since the loop can push onto stack and reach index 9 
+    private static final int MAX_OPEN_SELL_ORDERS_TO_PROCESS_LOOP = 8;
+    private static double[] targetBuyPercentages =  {0.0050, 0.010, 0.02, 0.03, 0.04, 0.05, 0.06, 0.07, 0.08, 0.09};
+    private static double[] targetSellPercentages = {0.0025, 0.005, 0.01, 0.02, 0.03, 0.04, 0.05, 0.06, 0.07, 0.08};
+
+
+private static final double MAX_HIGH_BID_REACHED_BEFORE_CANCELING_LONE_BUY_ORDER = 0.03; 
 
     
     private static void createAndShowGUI()
@@ -281,20 +290,6 @@ public class Trader
         checkBuyOrders(openOrders);
     
         mLastUpdatedLabel.setText("Last Update: " + new Date().toString());
-
-
-        System.out.println("=========================================================");
-        System.out.print("current buy order:  ");
-        if (mCurrentBuyOrder != null)
-        {
-            System.out.println(mCurrentBuyOrder.toString());
-        }
-        else
-        {
-            System.out.println("null");
-        }
-        System.out.println("number sell orders:  " + mOpenSellOrders.size());
-        System.out.println("=========================================================");
     } 
 
 
@@ -306,8 +301,6 @@ public class Trader
     private static void checkSellOrders(List<Order> openOrders)
         throws IOException
     {
-        mSellOrderFilled = false;
-
         List<Order> sellOrders = openOrders.stream().filter(order -> !order.getSide().equals("buy")).collect(Collectors.toList());
         Collections.sort(sellOrders);
 
@@ -327,7 +320,7 @@ public class Trader
                 Date date = new Date();
                 writeOrderToDisk(order, date);
                 writeOrderToScreen(order, date);
-                mSellOrderFilled = true;
+                mLastFulfilledSell = order;
             }
         }
         NewLimitOrderSingle[] tempSells = new NewLimitOrderSingle[mOpenSellOrders.size()];
@@ -347,11 +340,12 @@ public class Trader
         throws IOException
     {
         List<Order> buyOrders = openOrders.stream().filter(order -> order.getSide().equals("buy")).collect(Collectors.toList());
-        if (mSellOrderFilled)
+        if (mLastFulfilledSell != null)
         {
             clearBuyOrders(buyOrders);
         }
-        else if (buyOrders.size() > 1)
+        
+        if (buyOrders.size() > 1)
         {
             mErrorLabel.setText("You have more than one buy order open!!");
             clearBuyOrders(buyOrders);
@@ -372,7 +366,7 @@ public class Trader
                 mBuyTableModel.setData(mCurrentBuyOrder);
             }
         }
-        else if (buyOrders.size() == 0)
+        else if (buyOrders.size() == 0 && mOpenSellOrders.size() <= MAX_OPEN_SELL_ORDERS_TO_PROCESS_LOOP)
         {
             // We had a buy order and now don't so it went through. Write it out to disk
             // and create the next order.
@@ -385,9 +379,9 @@ public class Trader
                 double lastBuyPrice = mCurrentBuyOrder.getPrice().doubleValue();
 
                 // Create sell order
-                double sellTargetPercentIncrease = (mOpenSellOrders.size() < 2) ? 0.01 : mOpenSellOrders.size() * 0.01;
+                double sellTargetPercentIncrease = targetSellPercentages[mOpenSellOrders.size()]; 
                 double sellTargetPrice = lastBuyPrice + (lastBuyPrice * sellTargetPercentIncrease);
-                long sellLimitPrice = Math.round((Math.max(sellTargetPrice, mCurrentAsk.doubleValue()) + 10));
+                long sellLimitPrice = Math.round((Math.max(sellTargetPrice, mCurrentAsk.doubleValue()) + 5));
 
                 Order returnedSellOrder = createOrder("sell", mCurrentBuyOrder.getSize().doubleValue(), (int)sellLimitPrice); 
                 if (returnedSellOrder != null && !returnedSellOrder.getStatus().equals("rejected"))
@@ -396,11 +390,9 @@ public class Trader
                     NewLimitOrderSingle[] tempSells = new NewLimitOrderSingle[mOpenSellOrders.size()];
                     mOpenSellOrders.copyInto(tempSells);
                     mSellTableModel.setData(tempSells);
-                    
-                    double buyTargetPercentDecrease = (mOpenSellOrders.size() + 1) * 0.01;
-                    double buyTargetPrice = lastBuyPrice - (lastBuyPrice * buyTargetPercentDecrease);
-
-                    long buyLimitPrice = Math.round((Math.min(buyTargetPrice, mCurrentBid.doubleValue()) - 10));
+                  
+                    double buyTargetPrice = lastBuyPrice - (lastBuyPrice * targetBuyPercentages[mOpenSellOrders.size()]);
+                    long buyLimitPrice = Math.round((Math.min(buyTargetPrice, mCurrentBid.doubleValue()) - 5));
                     double dollarAmount = mUSDAccount.getAvailable().doubleValue() * .2;
                     double buyOrderSize = dollarAmount / buyLimitPrice;
 
@@ -430,20 +422,14 @@ public class Trader
                 // Create new order off sell order for previous buy
                 if (mOpenSellOrders.size() > 0 && mCurrentBid != null)
                 {
-                    double previousBuyTargetPercentDecrease = mOpenSellOrders.size() * 0.01;
-                    double newBuyTargetPercentDecrease = (mOpenSellOrders.size() + 1) * 0.01;
-                    double lastBuyPrice = mOpenSellOrders.peek().getPrice().doubleValue() * (1 - previousBuyTargetPercentDecrease);
-                    double buyTargetPrice = lastBuyPrice - (lastBuyPrice * newBuyTargetPercentDecrease);
-                    buyLimitPrice = Math.round((Math.min(buyTargetPrice, mCurrentBid.doubleValue()) - 10));
+                    double lastBuyPrice = (mLastFulfilledSell.getPrice().doubleValue() - 5) * (1 - targetSellPercentages[mOpenSellOrders.size()]);
+                    buyLimitPrice = Math.round((Math.min(lastBuyPrice, mCurrentBid.doubleValue()) - 5));
                 }
-                else    // we don't have any open sell orders, start from scratch based on highest bid order we've currently seen or drop in price
-                { 
-                    if (mHighestBidSeen != null &&
-                        mCurrentBid != null &&
-                        ((mHighestBidSeen.doubleValue() - mCurrentBid.doubleValue()) / mHighestBidSeen.doubleValue()) > 0.01)
-                    {
-                        buyLimitPrice = mCurrentBid.longValue() - 10;
-                    }
+                else if (mHighestBidSeen != null &&
+                         mCurrentBid != null &&
+                         ((mHighestBidSeen.doubleValue() - mCurrentBid.doubleValue()) / mHighestBidSeen.doubleValue()) > targetBuyPercentages[0])
+                {
+                    buyLimitPrice = mCurrentBid.longValue() - 5;
                 }
 
                 if (buyLimitPrice != -1)
@@ -461,23 +447,33 @@ public class Trader
                 }
             }
         }
+
+        mLastFulfilledSell = null;
     }
 
 
     private static Order createOrder(String side, double orderSize, long limitPrice)
     {
-        DecimalFormat df = new DecimalFormat("#.#####");
-        df.setRoundingMode(RoundingMode.DOWN);
+        if (side.equals("buy") &&
+            (orderSize < MIN_BTC || orderSize * limitPrice < MIN_USD))
+        {
+            return null;
+        }
+        else
+        {
+            DecimalFormat df = new DecimalFormat("#.#####");
+            df.setRoundingMode(RoundingMode.DOWN);
 
-        NewLimitOrderSingle newOrder = new NewLimitOrderSingle();
-        newOrder.setSide(side);
-        newOrder.setProduct_id("BTC-USD");
-        newOrder.setType("limit");
-        newOrder.setPost_only(true);
-        newOrder.setSize(new BigDecimal(df.format(orderSize)));
-        newOrder.setPrice(new BigDecimal(limitPrice));
+            NewLimitOrderSingle newOrder = new NewLimitOrderSingle();
+            newOrder.setSide(side);
+            newOrder.setProduct_id("BTC-USD");
+            newOrder.setType("limit");
+            newOrder.setPost_only(true);
+            newOrder.setSize(new BigDecimal(df.format(orderSize)));
+            newOrder.setPrice(new BigDecimal(limitPrice));
 
-        return mOrderService.createOrder(newOrder);
+            return mOrderService.createOrder(newOrder);
+        }
     }
 
 
@@ -611,7 +607,8 @@ public class Trader
         public void setData(NewLimitOrderSingle order)
         {
             data = order;
-            
+            mOpenBuyTable.invalidate();
+            mOpenBuyTable.repaint();
         }
 
         public int getRowCount()
@@ -662,7 +659,8 @@ public class Trader
         public void setData(NewLimitOrderSingle[] orders)
         {
             data = orders;
-            
+            mOpenSellsTable.invalidate();
+            mOpenSellsTable.repaint();
         }
 
         public int getRowCount()
@@ -734,6 +732,11 @@ public class Trader
         runTestForSeriesOfBuysUsingPricesOfPreviousOrdersToDriveNewLimits();
         runTestForSeriesOfBuysUsingMarketPricesToDriveNewLimits();
         runTestForInitialBuyAfterOnePercentDropFromHighestPriceSeen();
+        runTestForSeriesOfBuysThenASellUsingPricesOfPreviousOrdersToDriveNewLimits();
+        runTestForSeriesOfBuysThenASellUsingMarketPricesToDriveNewLimits();
+        runTestForNotEnoughBitcoinsInOrder();
+        runTestForNotEnoughCash();
+        runTestForCancelingBuyAfterRunUp();
     }
 
 
@@ -878,13 +881,13 @@ public class Trader
         mAccountService = new TestAccountService(balances);
 
         OrderItem bid1 = new OrderItem();
-        bid1.setPrice(new BigDecimal("8825"));
+        bid1.setPrice(new BigDecimal("8911"));
         OrderItem bid2 = new OrderItem();
-        bid2.setPrice(new BigDecimal("8575"));
+        bid2.setPrice(new BigDecimal("8727"));
         OrderItem bid3 = new OrderItem();
-        bid3.setPrice(new BigDecimal("8200"));
+        bid3.setPrice(new BigDecimal("8461"));
         OrderItem bid4 = new OrderItem();
-        bid4.setPrice(new BigDecimal("7777"));
+        bid4.setPrice(new BigDecimal("8117"));
 
         List<OrderItem> bids = new ArrayList<OrderItem>();
         bids.add(bid1);
@@ -894,13 +897,13 @@ public class Trader
 
 
         OrderItem ask1 = new OrderItem();
-        ask1.setPrice(new BigDecimal("8900"));
+        ask1.setPrice(new BigDecimal("8949"));
         OrderItem ask2 = new OrderItem();
-        ask2.setPrice(new BigDecimal("8700"));
+        ask2.setPrice(new BigDecimal("8949"));
         OrderItem ask3 = new OrderItem();
-        ask3.setPrice(new BigDecimal("8440"));
+        ask3.setPrice(new BigDecimal("8809"));
         OrderItem ask4 = new OrderItem();
-        ask4.setPrice(new BigDecimal("8096"));
+        ask4.setPrice(new BigDecimal("8624"));
 
         List<OrderItem> asks = new ArrayList<OrderItem>();
         asks.add(ask1);
@@ -927,37 +930,37 @@ public class Trader
 
         assert(mOpenSellOrders.size() == 1);
         assert(mOpenSellOrders.peek().getSize().doubleValue() == 0.01333);
-        assert(mOpenSellOrders.peek().getPrice().doubleValue() == 9100);
+        assert(mOpenSellOrders.peek().getPrice().doubleValue() == 9028);
 
-        assert(mCurrentBuyOrder.getSize().doubleValue() == 0.01089);
-        assert(mCurrentBuyOrder.getPrice().doubleValue() == 8810);
+        assert(mCurrentBuyOrder.getSize().doubleValue() == 0.01078);
+        assert(mCurrentBuyOrder.getPrice().doubleValue() == 8905);
 
 
         runTestLoop();
         assert(mOpenSellOrders.size() == 2);
-        assert(mOpenSellOrders.peek().getSize().doubleValue() == 0.01089);
-        assert(mOpenSellOrders.peek().getPrice().doubleValue() == 8908);
+        assert(mOpenSellOrders.peek().getSize().doubleValue() == 0.01078);
+        assert(mOpenSellOrders.peek().getPrice().doubleValue() == 8955);
 
-        assert(mCurrentBuyOrder.getSize().doubleValue() == 0.00899);
-        assert(mCurrentBuyOrder.getPrice().doubleValue() == 8536); 
+        assert(mCurrentBuyOrder.getSize().doubleValue() == 0.00880);
+        assert(mCurrentBuyOrder.getPrice().doubleValue() == 8722); 
 
 
         runTestLoop();
         assert(mOpenSellOrders.size() == 3);
-        assert(mOpenSellOrders.peek().getSize().doubleValue() == 0.00899);
-        assert(mOpenSellOrders.peek().getPrice().doubleValue() == 8717);
+        assert(mOpenSellOrders.peek().getSize().doubleValue() == 0.00880);
+        assert(mOpenSellOrders.peek().getPrice().doubleValue() == 8814);
 
-        assert(mCurrentBuyOrder.getSize().doubleValue() == 0.0075);
-        assert(mCurrentBuyOrder.getPrice().doubleValue() == 8185);
+        assert(mCurrentBuyOrder.getSize().doubleValue() == 0.00726);
+        assert(mCurrentBuyOrder.getPrice().doubleValue() == 8455);
 
 
         runTestLoop();
         assert(mOpenSellOrders.size() == 4);
-        assert(mOpenSellOrders.peek().getSize().doubleValue() == 0.0075);
-        assert(mOpenSellOrders.peek().getPrice().doubleValue() == 8441);
+        assert(mOpenSellOrders.peek().getSize().doubleValue() == 0.00726);
+        assert(mOpenSellOrders.peek().getPrice().doubleValue() == 8629);
 
-        assert(mCurrentBuyOrder.getSize().doubleValue() == 0.00632);
-        assert(mCurrentBuyOrder.getPrice().doubleValue() == 7766);
+        assert(mCurrentBuyOrder.getSize().doubleValue() == 0.00605);
+        assert(mCurrentBuyOrder.getPrice().doubleValue() == 8112);
     }
 
 
@@ -977,13 +980,13 @@ public class Trader
         mAccountService = new TestAccountService(balances);
 
         OrderItem bid1 = new OrderItem();
-        bid1.setPrice(new BigDecimal("8700"));
+        bid1.setPrice(new BigDecimal("8900"));
         OrderItem bid2 = new OrderItem();
-        bid2.setPrice(new BigDecimal("8200"));
+        bid2.setPrice(new BigDecimal("8700"));
         OrderItem bid3 = new OrderItem();
-        bid3.setPrice(new BigDecimal("7500"));
+        bid3.setPrice(new BigDecimal("8400"));
         OrderItem bid4 = new OrderItem();
-        bid4.setPrice(new BigDecimal("6750"));
+        bid4.setPrice(new BigDecimal("8000"));
 
         List<OrderItem> bids = new ArrayList<OrderItem>();
         bids.add(bid1);
@@ -993,13 +996,13 @@ public class Trader
 
 
         OrderItem ask1 = new OrderItem();
-        ask1.setPrice(new BigDecimal("8900"));
+        ask1.setPrice(new BigDecimal("8949"));
         OrderItem ask2 = new OrderItem();
-        ask2.setPrice(new BigDecimal("8900"));
+        ask2.setPrice(new BigDecimal("8949"));
         OrderItem ask3 = new OrderItem();
-        ask3.setPrice(new BigDecimal("8400"));
+        ask3.setPrice(new BigDecimal("8810"));
         OrderItem ask4 = new OrderItem();
-        ask4.setPrice(new BigDecimal("7900"));
+        ask4.setPrice(new BigDecimal("8624"));
 
         List<OrderItem> asks = new ArrayList<OrderItem>();
         asks.add(ask1);
@@ -1026,37 +1029,37 @@ public class Trader
 
         assert(mOpenSellOrders.size() == 1);
         assert(mOpenSellOrders.peek().getSize().doubleValue() == 0.01333);
-        assert(mOpenSellOrders.peek().getPrice().doubleValue() == 9100);
+        assert(mOpenSellOrders.peek().getPrice().doubleValue() == 9028);
 
-        assert(mCurrentBuyOrder.getSize().doubleValue() == 0.01104);
-        assert(mCurrentBuyOrder.getPrice().doubleValue() == 8690);
+        assert(mCurrentBuyOrder.getSize().doubleValue() == 0.01079);
+        assert(mCurrentBuyOrder.getPrice().doubleValue() == 8895);
 
 
         runTestLoop();
         assert(mOpenSellOrders.size() == 2);
-        assert(mOpenSellOrders.peek().getSize().doubleValue() == 0.01104);
-        assert(mOpenSellOrders.peek().getPrice().doubleValue() == 8910);
+        assert(mOpenSellOrders.peek().getSize().doubleValue() == 0.01079);
+        assert(mOpenSellOrders.peek().getPrice().doubleValue() == 8954);
 
-        assert(mCurrentBuyOrder.getSize().doubleValue() == 0.00937);
-        assert(mCurrentBuyOrder.getPrice().doubleValue() == 8190); 
+        assert(mCurrentBuyOrder.getSize().doubleValue() == 0.00883);
+        assert(mCurrentBuyOrder.getPrice().doubleValue() == 8695); 
 
 
         runTestLoop();
         assert(mOpenSellOrders.size() == 3);
-        assert(mOpenSellOrders.peek().getSize().doubleValue() == 0.00937);
-        assert(mOpenSellOrders.peek().getPrice().doubleValue() == 8410);
+        assert(mOpenSellOrders.peek().getSize().doubleValue() == 0.00883);
+        assert(mOpenSellOrders.peek().getPrice().doubleValue() == 8815);
 
-        assert(mCurrentBuyOrder.getSize().doubleValue() == 0.0082);
-        assert(mCurrentBuyOrder.getPrice().doubleValue() == 7490);
+        assert(mCurrentBuyOrder.getSize().doubleValue() == 0.00731);
+        assert(mCurrentBuyOrder.getPrice().doubleValue() == 8395);
 
 
         runTestLoop();
         assert(mOpenSellOrders.size() == 4);
-        assert(mOpenSellOrders.peek().getSize().doubleValue() == 0.0082);
-        assert(mOpenSellOrders.peek().getPrice().doubleValue() == 7910);
+        assert(mOpenSellOrders.peek().getSize().doubleValue() == 0.00731);
+        assert(mOpenSellOrders.peek().getPrice().doubleValue() == 8629);
 
-        assert(mCurrentBuyOrder.getSize().doubleValue() == 0.00729);
-        assert(mCurrentBuyOrder.getPrice().doubleValue() == 6740);
+        assert(mCurrentBuyOrder.getSize().doubleValue() == 0.00614);
+        assert(mCurrentBuyOrder.getPrice().doubleValue() == 7995);
     }
 
 
@@ -1077,9 +1080,9 @@ public class Trader
         OrderItem bid1 = new OrderItem();
         bid1.setPrice(new BigDecimal("8700"));
         OrderItem bid2 = new OrderItem();
-        bid2.setPrice(new BigDecimal("8650"));
+        bid2.setPrice(new BigDecimal("8675"));
         OrderItem bid3 = new OrderItem();
-        bid3.setPrice(new BigDecimal("8600"));
+        bid3.setPrice(new BigDecimal("8650"));
 
         List<OrderItem> bids = new ArrayList<OrderItem>();
         bids.add(bid1);
@@ -1094,9 +1097,275 @@ public class Trader
         runTestLoop();
 
         assert(mCurrentBuyOrder != null);
-        assert(mCurrentBuyOrder.getSize().doubleValue() == 0.01396);
-        assert(mCurrentBuyOrder.getPrice().doubleValue() == 8590);
+        assert(mCurrentBuyOrder.getSize().doubleValue() == 0.01388);
+        assert(mCurrentBuyOrder.getPrice().doubleValue() == 8645);
     }
+
+
+
+
+
+    private static void runTestForSeriesOfBuysThenASellUsingPricesOfPreviousOrdersToDriveNewLimits()
+    {
+        cleanFilledOrdersDir();
+        mOpenSellOrders.clear();
+
+        List<BigDecimal> balances = new ArrayList<BigDecimal>();
+        balances.add(new BigDecimal(480.00));
+        balances.add(new BigDecimal(580.00));
+        balances.add(new BigDecimal(580.00));
+
+        mAccountService = new TestAccountService(balances);
+
+        OrderItem bid1 = new OrderItem();
+        bid1.setPrice(new BigDecimal("8911"));
+        OrderItem bid2 = new OrderItem();
+        bid2.setPrice(new BigDecimal("8906"));
+
+        List<OrderItem> bids = new ArrayList<OrderItem>();
+        bids.add(bid1);
+        bids.add(bid2);
+
+        OrderItem ask1 = new OrderItem();
+        ask1.setPrice(new BigDecimal("8949"));
+        OrderItem ask2 = new OrderItem();
+        ask2.setPrice(new BigDecimal("8949"));
+        OrderItem ask3 = new OrderItem();
+        ask3.setPrice(new BigDecimal("8988"));
+
+        List<OrderItem> asks = new ArrayList<OrderItem>();
+        asks.add(ask1);
+        asks.add(ask2);
+        asks.add(ask3);
+        
+        mMarketDataService = new TestMarketDataService(bids, asks);
+
+        NewLimitOrderSingle order1 = new NewLimitOrderSingle();
+        order1.setSide("buy");
+        order1.setSize(new BigDecimal(0.01333));
+        order1.setPrice(new BigDecimal(9000));
+        mCurrentBuyOrder = order1;
+
+        mOrderService = new TestOrderService(new ArrayList<Order>());
+
+        TEST_ITERATIONS = 2;
+        runTestLoop();
+
+        ((TestOrderService)mOrderService).fulfillLastSellOrder();
+
+        TEST_ITERATIONS = 1;
+        runTestLoop();
+
+        assert(mOpenSellOrders.size() == 1);
+        assert(mOpenSellOrders.peek().getSize().doubleValue() == 0.01333);
+        assert(mOpenSellOrders.peek().getPrice().doubleValue() == 9028);
+
+        assert(mCurrentBuyOrder.getSize().doubleValue() == 0.01303);
+        assert(mCurrentBuyOrder.getPrice().doubleValue() == 8900); 
+    }
+
+
+
+    private static void runTestForSeriesOfBuysThenASellUsingMarketPricesToDriveNewLimits()
+    {
+        cleanFilledOrdersDir();
+        mOpenSellOrders.clear();
+
+        List<BigDecimal> balances = new ArrayList<BigDecimal>();
+        balances.add(new BigDecimal(480.00));
+        balances.add(new BigDecimal(580.00));
+        balances.add(new BigDecimal(580.00));
+
+        mAccountService = new TestAccountService(balances);
+
+        OrderItem bid1 = new OrderItem();
+        bid1.setPrice(new BigDecimal("8911"));
+        OrderItem bid2 = new OrderItem();
+        bid2.setPrice(new BigDecimal("8800"));
+
+        List<OrderItem> bids = new ArrayList<OrderItem>();
+        bids.add(bid1);
+        bids.add(bid2);
+
+        OrderItem ask1 = new OrderItem();
+        ask1.setPrice(new BigDecimal("8949"));
+        OrderItem ask2 = new OrderItem();
+        ask2.setPrice(new BigDecimal("8949"));
+        OrderItem ask3 = new OrderItem();
+        ask3.setPrice(new BigDecimal("8988"));
+
+        List<OrderItem> asks = new ArrayList<OrderItem>();
+        asks.add(ask1);
+        asks.add(ask2);
+        asks.add(ask3);
+        
+        mMarketDataService = new TestMarketDataService(bids, asks);
+
+        NewLimitOrderSingle order1 = new NewLimitOrderSingle();
+        order1.setSide("buy");
+        order1.setSize(new BigDecimal(0.01333));
+        order1.setPrice(new BigDecimal(9000));
+        mCurrentBuyOrder = order1;
+
+        mOrderService = new TestOrderService(new ArrayList<Order>());
+
+        TEST_ITERATIONS = 2;
+        runTestLoop();
+
+        ((TestOrderService)mOrderService).fulfillLastSellOrder();
+
+        TEST_ITERATIONS = 1;
+        runTestLoop();
+
+        assert(mOpenSellOrders.size() == 1);
+        assert(mOpenSellOrders.peek().getSize().doubleValue() == 0.01333);
+        assert(mOpenSellOrders.peek().getPrice().doubleValue() == 9028);
+
+        assert(mCurrentBuyOrder.getSize().doubleValue() == 0.01318);
+        assert(mCurrentBuyOrder.getPrice().doubleValue() == 8795); 
+    }
+
+
+
+    private static void runTestForNotEnoughBitcoinsInOrder()
+    {
+        cleanFilledOrdersDir();
+        mOpenSellOrders.clear();
+
+        mCurrentBuyOrder = null;
+        mHighestBidSeen = null;
+        mCurrentBid = null;
+
+        cleanFilledOrdersDir();
+
+        List<BigDecimal> balances = new ArrayList<BigDecimal>();
+        balances.add(new BigDecimal(150.00));
+        balances.add(new BigDecimal(150.00));
+        balances.add(new BigDecimal(150.00));
+
+        mAccountService = new TestAccountService(balances);
+
+        OrderItem bid1 = new OrderItem();
+        bid1.setPrice(new BigDecimal("35000"));
+        OrderItem bid2 = new OrderItem();
+        bid2.setPrice(new BigDecimal("34999"));
+        OrderItem bid3 = new OrderItem();
+        bid3.setPrice(new BigDecimal("32000"));
+
+        List<OrderItem> bids = new ArrayList<OrderItem>();
+        bids.add(bid1);
+        bids.add(bid2);
+        bids.add(bid3);
+
+        mMarketDataService = new TestMarketDataService(bids, new ArrayList<OrderItem>());
+
+        mOrderService = new TestOrderService(new ArrayList<Order>());
+
+        TEST_ITERATIONS = 3;
+        runTestLoop();
+
+        assert(mCurrentBuyOrder == null);
+    }
+
+
+
+    private static void runTestForNotEnoughCash()
+    {
+        cleanFilledOrdersDir();
+        mOpenSellOrders.clear();
+
+        mCurrentBuyOrder = null;
+        mHighestBidSeen = null;
+        mCurrentBid = null;
+
+        cleanFilledOrdersDir();
+
+        List<BigDecimal> balances = new ArrayList<BigDecimal>();
+        balances.add(new BigDecimal(40.00));
+        balances.add(new BigDecimal(40.00));
+        balances.add(new BigDecimal(40.00));
+
+        mAccountService = new TestAccountService(balances);
+
+        OrderItem bid1 = new OrderItem();
+        bid1.setPrice(new BigDecimal("1000"));
+        OrderItem bid2 = new OrderItem();
+        bid2.setPrice(new BigDecimal("999"));
+        OrderItem bid3 = new OrderItem();
+        bid3.setPrice(new BigDecimal("870"));
+
+        List<OrderItem> bids = new ArrayList<OrderItem>();
+        bids.add(bid1);
+        bids.add(bid2);
+        bids.add(bid3);
+
+        mMarketDataService = new TestMarketDataService(bids, new ArrayList<OrderItem>());
+
+        mOrderService = new TestOrderService(new ArrayList<Order>());
+
+        TEST_ITERATIONS = 3;
+        runTestLoop();
+
+        assert(mCurrentBuyOrder == null);
+    }
+
+
+
+    private static void runTestForCancelingBuyAfterRunUp()
+    {
+        cleanFilledOrdersDir();
+        mOpenSellOrders.clear();
+
+        mCurrentBuyOrder = null;
+        mHighestBidSeen = null;
+        mCurrentBid = null;
+
+        cleanFilledOrdersDir();
+        mAccountService = new TestAccountService(null);
+
+        OrderItem bid1 = new OrderItem();
+        bid1.setPrice(new BigDecimal("8700"));
+        OrderItem bid2 = new OrderItem();
+        bid2.setPrice(new BigDecimal("8910"));
+
+        List<OrderItem> bids = new ArrayList<OrderItem>();
+        bids.add(bid1);
+        bids.add(bid2);
+
+
+        OrderItem ask1 = new OrderItem();
+        ask1.setPrice(new BigDecimal("8701"));
+        OrderItem ask2 = new OrderItem();
+        ask2.setPrice(new BigDecimal("8911"));
+
+        List<OrderItem> asks = new ArrayList<OrderItem>();
+        asks.add(ask1);
+        asks.add(ask2);
+
+        mMarketDataService = new TestMarketDataService(bids, asks);
+
+        ArrayList<Order> orders = new ArrayList<Order>();
+        Order order1 = new Order();
+        order1.setSide("buy");
+        order1.setSize("2");
+        order1.setPrice("8700");
+        orders.add(order1);
+        mOrderService = new TestOrderService(orders);
+
+
+        mOrderService = new TestOrderService(new ArrayList<Order>());
+
+        TEST_ITERATIONS = 2;
+        runTestLoop();
+
+        assert(mCurrentBuyOrder == null);
+    }
+
+
+
+
+
+
 
 
 

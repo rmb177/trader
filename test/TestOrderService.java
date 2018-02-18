@@ -48,6 +48,14 @@ public class TestOrderService implements OrderServiceInterface
         return orders; 
     }
 
+
+
+    // Testing function to mimic a sell order going through on the server.
+    public void fulfillLastSellOrder()
+    {
+        orders.remove(orders.size() - 1);
+    }
+
 }
 
 
