@@ -62,8 +62,7 @@ import javax.swing.table.AbstractTableModel;
 
 public class Trader
 {
-    private final static boolean TESTING = false;
-    private static int TEST_ITERATIONS = 0;
+    private final static boolean TESTING = true;
 
     private final static double MIN_USD = 10.00;
     private final static double MIN_BTC = 0.001;
@@ -707,11 +706,11 @@ private static final double MAX_HIGH_BID_REACHED_BEFORE_CANCELING_LONE_BUY_ORDER
     ///////////////////////////////////////////////////////////////////////////////////////////
     // Tests
     ///////////////////////////////////////////////////////////////////////////////////////////
-    private static void runTestLoop()
+    private static void runTestLoop(int numIterations)
     {
         try
         {
-            for (int x = 0; x < TEST_ITERATIONS; ++x)
+            for (int x = 0; x < numIterations; ++x)
             {
                 checkOrderStatus();
             }
@@ -761,8 +760,7 @@ private static final double MAX_HIGH_BID_REACHED_BEFORE_CANCELING_LONE_BUY_ORDER
 
         mOrderService = new TestOrderService(orders);
 
-        TEST_ITERATIONS = 1;
-        runTestLoop();
+        runTestLoop(1);
         assert(mErrorLabel.getText().equals("You have more than one buy order open!!"));
         assert(mOrderService.getOpenOrders().size() == 0);
         assert(mCurrentBuyOrder == null);
@@ -790,8 +788,7 @@ private static final double MAX_HIGH_BID_REACHED_BEFORE_CANCELING_LONE_BUY_ORDER
 
         mOrderService = new TestOrderService(orders);
 
-        TEST_ITERATIONS = 1;
-        runTestLoop();
+        runTestLoop(1);
         assert(mErrorLabel.getText().equals("Your current buy order does not match the one you have in memory!!"));
         assert(mOrderService.getOpenOrders().size() == 0);
         assert(mCurrentBuyOrder == null);
@@ -815,8 +812,7 @@ private static final double MAX_HIGH_BID_REACHED_BEFORE_CANCELING_LONE_BUY_ORDER
 
         NewLimitOrderSingle limitOrder = new NewLimitOrderSingle(order1);
 
-        TEST_ITERATIONS = 1;
-        runTestLoop();
+        runTestLoop(1);
         assert(mOrderService.getOpenOrders().size() == 1);
         assert(mCurrentBuyOrder.getSize().equals(limitOrder.getSize()));
         assert(mCurrentBuyOrder.getPrice().equals(limitOrder.getPrice()));
@@ -857,8 +853,7 @@ private static final double MAX_HIGH_BID_REACHED_BEFORE_CANCELING_LONE_BUY_ORDER
 
         mOrderService = new TestOrderService(orders);
 
-        TEST_ITERATIONS = 1;
-        runTestLoop();
+        runTestLoop(1);
 
         assert(mOpenSellOrders.size() == 3);
         assert(mOpenSellOrders.pop().getPrice().doubleValue() == new BigDecimal(8100).doubleValue());
@@ -921,8 +916,7 @@ private static final double MAX_HIGH_BID_REACHED_BEFORE_CANCELING_LONE_BUY_ORDER
 
         mOrderService = new TestOrderService(new ArrayList<Order>());
 
-        TEST_ITERATIONS = 1;
-        runTestLoop();
+        runTestLoop(1);
 
         String[] outputFiles = new File("filled_orders").list(new TxtFileFilter());
         assert(outputFiles.length == 1 && outputFiles[0].endsWith("_" + order1.getSide() + "_1.txt"));
@@ -936,7 +930,7 @@ private static final double MAX_HIGH_BID_REACHED_BEFORE_CANCELING_LONE_BUY_ORDER
         assert(mCurrentBuyOrder.getPrice().doubleValue() == 8905);
 
 
-        runTestLoop();
+        runTestLoop(1);
         assert(mOpenSellOrders.size() == 2);
         assert(mOpenSellOrders.peek().getSize().doubleValue() == 0.01078);
         assert(mOpenSellOrders.peek().getPrice().doubleValue() == 8955);
@@ -945,7 +939,7 @@ private static final double MAX_HIGH_BID_REACHED_BEFORE_CANCELING_LONE_BUY_ORDER
         assert(mCurrentBuyOrder.getPrice().doubleValue() == 8722); 
 
 
-        runTestLoop();
+        runTestLoop(1);
         assert(mOpenSellOrders.size() == 3);
         assert(mOpenSellOrders.peek().getSize().doubleValue() == 0.00880);
         assert(mOpenSellOrders.peek().getPrice().doubleValue() == 8814);
@@ -954,7 +948,7 @@ private static final double MAX_HIGH_BID_REACHED_BEFORE_CANCELING_LONE_BUY_ORDER
         assert(mCurrentBuyOrder.getPrice().doubleValue() == 8455);
 
 
-        runTestLoop();
+        runTestLoop(1);
         assert(mOpenSellOrders.size() == 4);
         assert(mOpenSellOrders.peek().getSize().doubleValue() == 0.00726);
         assert(mOpenSellOrders.peek().getPrice().doubleValue() == 8629);
@@ -1020,8 +1014,7 @@ private static final double MAX_HIGH_BID_REACHED_BEFORE_CANCELING_LONE_BUY_ORDER
 
         mOrderService = new TestOrderService(new ArrayList<Order>());
 
-        TEST_ITERATIONS = 1;
-        runTestLoop();
+        runTestLoop(1);
 
         String[] outputFiles = new File("filled_orders").list(new TxtFileFilter());
         assert(outputFiles.length == 1 && outputFiles[0].endsWith("_" + order1.getSide() + "_1.txt"));
@@ -1035,7 +1028,7 @@ private static final double MAX_HIGH_BID_REACHED_BEFORE_CANCELING_LONE_BUY_ORDER
         assert(mCurrentBuyOrder.getPrice().doubleValue() == 8895);
 
 
-        runTestLoop();
+        runTestLoop(1);
         assert(mOpenSellOrders.size() == 2);
         assert(mOpenSellOrders.peek().getSize().doubleValue() == 0.01079);
         assert(mOpenSellOrders.peek().getPrice().doubleValue() == 8954);
@@ -1044,7 +1037,7 @@ private static final double MAX_HIGH_BID_REACHED_BEFORE_CANCELING_LONE_BUY_ORDER
         assert(mCurrentBuyOrder.getPrice().doubleValue() == 8695); 
 
 
-        runTestLoop();
+        runTestLoop(1);
         assert(mOpenSellOrders.size() == 3);
         assert(mOpenSellOrders.peek().getSize().doubleValue() == 0.00883);
         assert(mOpenSellOrders.peek().getPrice().doubleValue() == 8815);
@@ -1053,7 +1046,7 @@ private static final double MAX_HIGH_BID_REACHED_BEFORE_CANCELING_LONE_BUY_ORDER
         assert(mCurrentBuyOrder.getPrice().doubleValue() == 8395);
 
 
-        runTestLoop();
+        runTestLoop(1);
         assert(mOpenSellOrders.size() == 4);
         assert(mOpenSellOrders.peek().getSize().doubleValue() == 0.00731);
         assert(mOpenSellOrders.peek().getPrice().doubleValue() == 8629);
@@ -1093,8 +1086,7 @@ private static final double MAX_HIGH_BID_REACHED_BEFORE_CANCELING_LONE_BUY_ORDER
 
         mOrderService = new TestOrderService(new ArrayList<Order>());
 
-        TEST_ITERATIONS = 3;
-        runTestLoop();
+        runTestLoop(3);
 
         assert(mCurrentBuyOrder != null);
         assert(mCurrentBuyOrder.getSize().doubleValue() == 0.01388);
@@ -1148,13 +1140,11 @@ private static final double MAX_HIGH_BID_REACHED_BEFORE_CANCELING_LONE_BUY_ORDER
 
         mOrderService = new TestOrderService(new ArrayList<Order>());
 
-        TEST_ITERATIONS = 2;
-        runTestLoop();
+        runTestLoop(2);
 
         ((TestOrderService)mOrderService).fulfillLastSellOrder();
 
-        TEST_ITERATIONS = 1;
-        runTestLoop();
+        runTestLoop(1);
 
         assert(mOpenSellOrders.size() == 1);
         assert(mOpenSellOrders.peek().getSize().doubleValue() == 0.01333);
@@ -1209,13 +1199,11 @@ private static final double MAX_HIGH_BID_REACHED_BEFORE_CANCELING_LONE_BUY_ORDER
 
         mOrderService = new TestOrderService(new ArrayList<Order>());
 
-        TEST_ITERATIONS = 2;
-        runTestLoop();
+        runTestLoop(2);
 
         ((TestOrderService)mOrderService).fulfillLastSellOrder();
 
-        TEST_ITERATIONS = 1;
-        runTestLoop();
+        runTestLoop(1);
 
         assert(mOpenSellOrders.size() == 1);
         assert(mOpenSellOrders.peek().getSize().doubleValue() == 0.01333);
@@ -1261,8 +1249,7 @@ private static final double MAX_HIGH_BID_REACHED_BEFORE_CANCELING_LONE_BUY_ORDER
 
         mOrderService = new TestOrderService(new ArrayList<Order>());
 
-        TEST_ITERATIONS = 3;
-        runTestLoop();
+        runTestLoop(3);
 
         assert(mCurrentBuyOrder == null);
     }
@@ -1303,8 +1290,7 @@ private static final double MAX_HIGH_BID_REACHED_BEFORE_CANCELING_LONE_BUY_ORDER
 
         mOrderService = new TestOrderService(new ArrayList<Order>());
 
-        TEST_ITERATIONS = 3;
-        runTestLoop();
+        runTestLoop(3);
 
         assert(mCurrentBuyOrder == null);
     }
@@ -1355,8 +1341,7 @@ private static final double MAX_HIGH_BID_REACHED_BEFORE_CANCELING_LONE_BUY_ORDER
 
         mOrderService = new TestOrderService(new ArrayList<Order>());
 
-        TEST_ITERATIONS = 2;
-        runTestLoop();
+        runTestLoop(2);
 
         assert(mCurrentBuyOrder == null);
     }
