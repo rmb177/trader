@@ -105,7 +105,7 @@ public class Trader
     private static double[] targetSellPercentages = {0.0025, 0.005, 0.01, 0.02, 0.03, 0.04, 0.05, 0.06, 0.07, 0.08};
 
 
-private static final double MAX_HIGH_BID_REACHED_BEFORE_CANCELING_LONE_BUY_ORDER = 0.03; 
+private static final double MAX_HIGH_BID_REACHED_BEFORE_CANCELING_LONE_BUY_ORDER = 0.01; 
 
     
     private static void createAndShowGUI()
@@ -555,8 +555,9 @@ private static final double MAX_HIGH_BID_REACHED_BEFORE_CANCELING_LONE_BUY_ORDER
                 {
                     if (!TESTING)
                     {
+                        int numItemsOnStack = mOpenSellOrders.size();
                         PrintWriter writer = new PrintWriter("prev_sell_orders.txt", "UTF-8");
-                        for (int x = 0; x < mOpenSellOrders.size(); ++x)
+                        for (int x = 0; x < numItemsOnStack; ++x)
                         {
                             NewLimitOrderSingle order = mOpenSellOrders.pop();
                             writer.println(order.getSize() + ":" + order.getPrice());
