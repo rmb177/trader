@@ -49,6 +49,7 @@ import java.util.stream.Collectors;
 import javax.swing.BorderFactory;
 import javax.swing.Box;
 import javax.swing.BoxLayout;
+import javax.swing.JButton;
 import javax.swing.JFrame;
 import javax.swing.JLabel;
 import javax.swing.JOptionPane;
@@ -60,7 +61,7 @@ import javax.swing.JTextField;
 import javax.swing.SwingConstants;
 import javax.swing.table.AbstractTableModel;
 
-public class Trader
+public class Trader 
 {
     private final static boolean TESTING = true;
 
@@ -79,7 +80,7 @@ public class Trader
     private static JLabel mBidLabel = new JLabel();
     private static JLabel mAskLabel = new JLabel();
     private static JTextField mPollingField = new JTextField("2");
-    private static JLabel mBuyOrderIdLabel = new JLabel();
+    private static JButton mCancelBuyOrderButton = new JButton("Cancel Buy Order");
     private static JTable mOpenBuyTable;
     private static BuyTableModel mBuyTableModel;
     private static JTable mOpenSellsTable; 
@@ -95,6 +96,8 @@ public class Trader
     private static Stack<NewLimitOrderSingle> mOpenSellOrders = new Stack<NewLimitOrderSingle>();
 
 
+    private static String mCurrentBuyOrderId = null;
+
     private static NewLimitOrderSingle mLastFulfilledSell = null;
     private static boolean mDone;
 
@@ -105,7 +108,7 @@ public class Trader
     private static double[] targetSellPercentages = {0.0025, 0.005, 0.01, 0.02, 0.03, 0.04, 0.05, 0.06, 0.07, 0.08};
 
 
-private static final double MAX_HIGH_BID_REACHED_BEFORE_CANCELING_LONE_BUY_ORDER = 0.01; 
+    private static final double MAX_HIGH_BID_REACHED_BEFORE_CANCELING_LONE_BUY_ORDER = 0.01; 
 
     
     private static void createAndShowGUI()
@@ -137,13 +140,19 @@ private static final double MAX_HIGH_BID_REACHED_BEFORE_CANCELING_LONE_BUY_ORDER
         dataPanel.add(new JLabel("Polling Frequency (mins):"));
         dataPanel.add(mPollingField);
         dataPanel.add(new JLabel("Buy order ID:"));
-        dataPanel.add(mBuyOrderIdLabel);
 
         
         // Outstanding Orders
         JPanel outstandingOrdersPanel = new JPanel();
         outstandingOrdersPanel.setLayout(new BoxLayout(outstandingOrdersPanel, BoxLayout.Y_AXIS));
         outstandingOrdersPanel.setBorder(BorderFactory.createEmptyBorder(10, 10, 10, 10));
+
+        
+        outstandingOrdersPanel.add(mCancelBuyOrderButton);
+        mCancelBuyOrderButton.setEnabled(false);
+        mCancelBuyOrderButton.setActionCommand("cancelBuyOrder");
+        mCancelBuyOrderButton.addActionListener(new CancelOrderActionListener());
+        outstandingOrdersPanel.add(Box.createRigidArea(new Dimension(0, 20)));
 
         // Outstanding Buy Order
         mBuyTableModel = new BuyTableModel(); 
@@ -371,9 +380,12 @@ private static final double MAX_HIGH_BID_REACHED_BEFORE_CANCELING_LONE_BUY_ORDER
                     clearBuyOrders(buyOrders);
                 }
                 else
-                { 
-                    mCurrentBuyOrder = new NewLimitOrderSingle(buyOrders.get(0)); 
+                {
+                    Order order = buyOrders.get(0); 
+                    mCurrentBuyOrderId = order.getId();
+                    mCurrentBuyOrder = new NewLimitOrderSingle(order); 
                     mBuyTableModel.setData(mCurrentBuyOrder);
+                    mCancelBuyOrderButton.setEnabled(true);
                 }
             }
         }
@@ -411,9 +423,10 @@ private static final double MAX_HIGH_BID_REACHED_BEFORE_CANCELING_LONE_BUY_ORDER
                     Order returnedBuyOrder = createOrder("buy", buyOrderSize, (int)buyLimitPrice); 
                     if (returnedBuyOrder != null && !returnedBuyOrder.getStatus().equals("rejected"))
                     {
-                        mBuyOrderIdLabel.setText(returnedBuyOrder.getId());
+                        mCurrentBuyOrderId = returnedBuyOrder.getId();
                         mCurrentBuyOrder = new NewLimitOrderSingle(returnedBuyOrder);
                         mBuyTableModel.setData(mCurrentBuyOrder);
+                        mCancelBuyOrderButton.setEnabled(true);
                     }
                     else
                     {
@@ -454,9 +467,10 @@ private static final double MAX_HIGH_BID_REACHED_BEFORE_CANCELING_LONE_BUY_ORDER
                     Order returnedBuyOrder = createOrder("buy", buyOrderSize, buyLimitPrice); 
                     if (returnedBuyOrder != null && !returnedBuyOrder.getStatus().equals("rejected"))
                     {
-                        mBuyOrderIdLabel.setText(returnedBuyOrder.getId());
+                        mCurrentBuyOrderId = returnedBuyOrder.getId();
                         mCurrentBuyOrder = new NewLimitOrderSingle(returnedBuyOrder);
                         mBuyTableModel.setData(mCurrentBuyOrder);
+                        mCancelBuyOrderButton.setEnabled(true);
                     }
                 }
             }
@@ -491,6 +505,8 @@ private static final double MAX_HIGH_BID_REACHED_BEFORE_CANCELING_LONE_BUY_ORDER
     }
 
 
+    
+    
     /**
     * Something screwed up so just clear out all buy orders and
     * start from scratch.
@@ -501,9 +517,12 @@ private static final double MAX_HIGH_BID_REACHED_BEFORE_CANCELING_LONE_BUY_ORDER
         {
             mOrderService.cancelOrder(order.getId());
         }
-        mCurrentBuyOrder = null;
         buyOrders.clear();
+
+        mCurrentBuyOrderId = null;
+        mCurrentBuyOrder = null;
         mBuyTableModel.setData(mCurrentBuyOrder);
+        mCancelBuyOrderButton.setEnabled(false);
     }
 
 
@@ -616,7 +635,20 @@ private static final double MAX_HIGH_BID_REACHED_BEFORE_CANCELING_LONE_BUY_ORDER
     }
 
 
-
+    private static class CancelOrderActionListener implements ActionListener
+    {
+        public void actionPerformed(ActionEvent e) 
+        {
+            if ("cancelBuyOrder".equals(e.getActionCommand())) 
+            {
+                mOrderService.cancelOrder(mCurrentBuyOrderId);
+                mCurrentBuyOrderId = null;
+                mCurrentBuyOrder = null;
+                mBuyTableModel.setData(mCurrentBuyOrder);
+                mCancelBuyOrderButton.setEnabled(false);
+            } 
+        }
+    }
 
     private static class BuyTableModel extends AbstractTableModel
     {
