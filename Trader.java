@@ -78,7 +78,7 @@ public class Trader
     private static JLabel mHighestBidLabel = new JLabel();
     private static JLabel mBidLabel = new JLabel();
     private static JLabel mAskLabel = new JLabel();
-    private static JTextField mPollingField = new JTextField("1");
+    private static JTextField mPollingField = new JTextField("2");
     private static JLabel mBuyOrderIdLabel = new JLabel();
     private static JTable mOpenBuyTable;
     private static BuyTableModel mBuyTableModel;
@@ -232,6 +232,7 @@ private static final double MAX_HIGH_BID_REACHED_BEFORE_CANCELING_LONE_BUY_ORDER
                 catch (Exception e)
                 {
                     mErrorLabel.setText(e.getMessage());
+                    mErrorLabel.invalidate();
                     for (int x = 0; x < e.getStackTrace().length; ++x)
                     {
                         System.out.println(e.getStackTrace()[x].toString());
@@ -363,6 +364,7 @@ private static final double MAX_HIGH_BID_REACHED_BEFORE_CANCELING_LONE_BUY_ORDER
             {
                 if (mCurrentAsk != null &&
                     mCurrentBuyOrder != null &&
+                    mOpenSellOrders.size() == 0 &&
                         mCurrentAsk.doubleValue() >= 
                         (mCurrentBuyOrder.getPrice().doubleValue() + (mCurrentBuyOrder.getPrice().doubleValue() * MAX_HIGH_BID_REACHED_BEFORE_CANCELING_LONE_BUY_ORDER)))
                 {
@@ -432,7 +434,9 @@ private static final double MAX_HIGH_BID_REACHED_BEFORE_CANCELING_LONE_BUY_ORDER
                 // Create new order off sell order for previous buy
                 if (mOpenSellOrders.size() > 0 && mCurrentBid != null)
                 {
-                    double lastBuyPrice = (mLastFulfilledSell.getPrice().doubleValue() - 5) * (1 - targetSellPercentages[mOpenSellOrders.size()]);
+                    // UPDATE ME AT SOME POINT  
+                    double valueToUse = mLastFulfilledSell == null ? mCurrentBid.doubleValue() : mLastFulfilledSell.getPrice().doubleValue() - 5;
+                    double lastBuyPrice = (valueToUse - 5) * (1 - targetSellPercentages[mOpenSellOrders.size()]);
                     buyLimitPrice = Math.round((Math.min(lastBuyPrice, mCurrentBid.doubleValue()) - 5));
                 }
                 else if (mHighestBidSeen != null &&
