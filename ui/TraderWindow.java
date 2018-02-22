@@ -1,3 +1,4 @@
+package ui;
 
 import com.coinbase.exchange.api.entity.NewLimitOrderSingle;
 
