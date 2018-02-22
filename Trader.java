@@ -1,4 +1,3 @@
-import com.coinbase.exchange.api.accounts.Account;
 import com.coinbase.exchange.api.accounts.AccountService;
 import com.coinbase.exchange.api.accounts.AccountServiceInterface;
 import com.coinbase.exchange.api.entity.NewLimitOrderSingle;
@@ -8,26 +7,19 @@ import com.coinbase.exchange.api.exchange.Signature;
 import com.coinbase.exchange.api.marketdata.MarketData;
 import com.coinbase.exchange.api.marketdata.MarketDataService;
 import com.coinbase.exchange.api.marketdata.MarketDataServiceInterface;
-import com.coinbase.exchange.api.marketdata.OrderItem;
+//import com.coinbase.exchange.api.marketdata.OrderItem;
 import com.coinbase.exchange.api.orders.Order;
 import com.coinbase.exchange.api.orders.OrderService;
 import com.coinbase.exchange.api.orders.OrderServiceInterface;
 
 import org.springframework.web.client.RestTemplate;
 
-import test.TestAccountService;
-import test.TestMarketDataService;
-import test.TestOrderService;
+//import test.TestAccountService;
+//import test.TestMarketDataService;
+//import test.TestOrderService;
 
-import java.awt.BorderLayout;
-import java.awt.Color;
-import java.awt.Dimension;
-import java.awt.event.ActionEvent;
-import java.awt.event.ActionListener;
-import java.awt.FlowLayout;
-import java.awt.GridLayout;
 import java.io.File;
-import java.io.FilenameFilter;
+//import java.io.FilenameFilter;
 import java.io.IOException;
 import java.io.PrintWriter;
 import java.math.BigDecimal;
@@ -38,30 +30,19 @@ import java.nio.file.Files;
 import java.nio.file.Paths;
 import java.text.DateFormat;
 import java.text.DecimalFormat;
-import java.text.NumberFormat;
 import java.text.SimpleDateFormat;
-import java.util.ArrayList;
+//import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Date;
 import java.util.List;
-import java.util.Scanner; 
 import java.util.Stack;
 import java.util.stream.Collectors;
 
-import javax.swing.BorderFactory;
-import javax.swing.Box;
-import javax.swing.BoxLayout;
-import javax.swing.JButton;
 import javax.swing.JFrame;
-import javax.swing.JLabel;
 import javax.swing.JOptionPane;
-import javax.swing.JPanel;
-import javax.swing.JScrollPane;
-import javax.swing.JTable;
-import javax.swing.JTextArea;
-import javax.swing.JTextField;
-import javax.swing.SwingConstants;
-import javax.swing.table.AbstractTableModel;
+
+
+
 
 public class Trader 
 {
@@ -69,28 +50,14 @@ public class Trader
 
     private final static double MIN_USD = 10.00;
     private final static double MIN_BTC = 0.001;
+
+    private static TraderWindow mTraderWindow;
  
-   
     private static AccountServiceInterface mAccountService;
     private static MarketDataServiceInterface mMarketDataService;
     private static OrderServiceInterface mOrderService;
 
-    private static JFrame mMainFrame = new JFrame("Trader");
-    private static JLabel mErrorLabel = new JLabel("");
-    private static JLabel mAvailableCashLabel = new JLabel();
-    private static JLabel mHighestBidLabel = new JLabel();
-    private static JLabel mBidLabel = new JLabel();
-    private static JLabel mAskLabel = new JLabel();
-    private static JTextField mPollingField = new JTextField("2");
-    private static JButton mCancelBuyOrderButton = new JButton("Cancel Buy Order");
-    private static JTable mOpenBuyTable;
-    private static BuyTableModel mBuyTableModel;
-    private static JTable mOpenSellsTable; 
-    private static SellTableModel mSellTableModel;
-    private static JTextArea mFilledOrders = new JTextArea();
-    private static JLabel mLastUpdatedLabel = new JLabel();
-
-    private static Account mUSDAccount;
+    private static BigDecimal mAvailableBalance;
     private static BigDecimal mHighestBidSeen;
     private static BigDecimal mCurrentBid;
     private static BigDecimal mCurrentAsk;
@@ -112,106 +79,116 @@ public class Trader
 
     private static final double MAX_HIGH_BID_REACHED_BEFORE_CANCELING_LONE_BUY_ORDER = 0.01; 
 
-    
-    private static void createAndShowGUI()
+
+
+    public static void main(String[] args)
     {
-        mMainFrame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
+        addShutdownHookToWriteExistingSellOrdersOnProgramExit();
 
-        // Error label
-        JPanel errorPanel = new JPanel();
-        errorPanel.setLayout(new FlowLayout(FlowLayout.CENTER));
-        errorPanel.setBorder(BorderFactory.createEmptyBorder(5, 5, 5, 5));
-        mErrorLabel.setForeground(Color.RED);
-        errorPanel.add(mErrorLabel);
+        Trader trader = new Trader();
 
+        javax.swing.SwingUtilities.invokeLater(new Runnable() 
+        {
+            public void run() 
+            {
+                readInSellOrdrersFromLastShutdown(trader);
+                
+                mTraderWindow = new TraderWindow();
+                JFrame mainFrame = new JFrame("Trader");
+                mainFrame.getContentPane().add(mTraderWindow);
 
-        // Exchange panel
-        GridLayout gridLayout = new GridLayout(0, 2, 5, 10);
-        JPanel dataPanel = new JPanel();
-        dataPanel.setLayout(gridLayout);
-        dataPanel.setBorder(BorderFactory.createEmptyBorder(10, 10, 10, 10));
-       
-        dataPanel.add(new JLabel("$ Available:"));
-        dataPanel.add(mAvailableCashLabel); 
-        dataPanel.add(new JLabel("Highest Bid:"));
-        dataPanel.add(mHighestBidLabel);
-        dataPanel.add(new JLabel("Current Bid:"));
-        dataPanel.add(mBidLabel);
-        dataPanel.add(new JLabel("Current Ask:"));
-        dataPanel.add(mAskLabel);
-        dataPanel.add(new JLabel("Polling Frequency (mins):"));
-        dataPanel.add(mPollingField);
-        dataPanel.add(new JLabel("Buy order ID:"));
+                mainFrame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
+                mainFrame.pack();
+                mainFrame.setVisible(true);
 
-        
-        // Outstanding Orders
-        JPanel outstandingOrdersPanel = new JPanel();
-        outstandingOrdersPanel.setLayout(new BoxLayout(outstandingOrdersPanel, BoxLayout.Y_AXIS));
-        outstandingOrdersPanel.setBorder(BorderFactory.createEmptyBorder(10, 10, 10, 10));
-
-        
-        outstandingOrdersPanel.add(mCancelBuyOrderButton);
-        mCancelBuyOrderButton.setEnabled(false);
-        mCancelBuyOrderButton.setActionCommand("cancelBuyOrder");
-        mCancelBuyOrderButton.addActionListener(new CancelOrderActionListener());
-        outstandingOrdersPanel.add(Box.createRigidArea(new Dimension(0, 20)));
-
-        // Outstanding Buy Order
-        mBuyTableModel = new BuyTableModel(); 
-        mOpenBuyTable = new JTable(mBuyTableModel); 
-        mOpenBuyTable.setPreferredScrollableViewportSize(new Dimension(200, 18));
-        mOpenBuyTable.setFillsViewportHeight(true);
-        mOpenBuyTable.setEnabled(false);
-        JScrollPane scrollPane = new JScrollPane(mOpenBuyTable);
-
-        outstandingOrdersPanel.add(new JLabel("Outstanding Buy Order"));
-        outstandingOrdersPanel.add(scrollPane);
-        outstandingOrdersPanel.add(Box.createRigidArea(new Dimension(0,40)));
-
-        // Outstanding Sell Orders
-        mSellTableModel = new SellTableModel();
-        mOpenSellsTable = new JTable(mSellTableModel); 
-        mOpenSellsTable.setPreferredScrollableViewportSize(new Dimension(200, 100));
-        mOpenSellsTable.setFillsViewportHeight(true);
-        mOpenSellsTable.setEnabled(false);
-        scrollPane = new JScrollPane(mOpenSellsTable);
-
-        outstandingOrdersPanel.add(new JLabel("Outstanding Sell Orders"));
-        outstandingOrdersPanel.add(scrollPane);
-
-
-        // Filled orders and last updated status
-        JPanel bottomPanel = new JPanel();
-        bottomPanel.setLayout(new BoxLayout(bottomPanel, BoxLayout.Y_AXIS));
-        bottomPanel.setBorder(BorderFactory.createEmptyBorder(10, 10, 10, 10));
-        
-        mFilledOrders.setLineWrap(true);
-        mFilledOrders.setWrapStyleWord(true);
-        mFilledOrders.setEditable(false);
-        JScrollPane areaScrollPane = new JScrollPane(mFilledOrders);
-        areaScrollPane.setVerticalScrollBarPolicy(JScrollPane.VERTICAL_SCROLLBAR_ALWAYS);
-        areaScrollPane.setPreferredSize(new Dimension(850, 250));
-        areaScrollPane.setBorder(BorderFactory.createCompoundBorder(BorderFactory.createEmptyBorder(10, 10, 10, 10), areaScrollPane.getBorder()));
-
-        JPanel updatePanel = new JPanel();
-        updatePanel.setLayout(new FlowLayout(FlowLayout.CENTER));
-        updatePanel.setBorder(BorderFactory.createEmptyBorder(5, 5, 5, 5));
-        updatePanel.add(mLastUpdatedLabel);
-
-        bottomPanel.add(areaScrollPane);
-        bottomPanel.add(updatePanel);
-
-        BorderLayout borderLayout = new BorderLayout(20, 20);
-        mMainFrame.getContentPane().setLayout(borderLayout);
-        mMainFrame.getContentPane().add(errorPanel, BorderLayout.PAGE_START);
-        mMainFrame.getContentPane().add(dataPanel, BorderLayout.LINE_START);
-        mMainFrame.getContentPane().add(outstandingOrdersPanel, BorderLayout.CENTER);
-        mMainFrame.getContentPane().add(bottomPanel, BorderLayout.PAGE_END);
-        mMainFrame.pack();
-        mMainFrame.setVisible(true);
+                if (!TESTING)
+                {
+                    getCredentialsAndInitializeServices(mainFrame);
+                    RefreshExchangeInformation t = new RefreshExchangeInformation();
+                    t.start();
+                }   
+                else
+                {
+                    //runTests();
+                }
+            }
+        }); 
     }
- 
 
+
+    /**
+    * When the program shuts down we write out existing sell orders so we
+    * can read them back in next time the program runs and know whether or 
+    * not they were fulfilled.
+    */
+    private static void addShutdownHookToWriteExistingSellOrdersOnProgramExit()
+    {
+        if (!TESTING)
+        {
+            Runtime.getRuntime().addShutdownHook(new Thread() 
+            {
+                public void run()
+                {
+                    try
+                    {
+                        int numItemsOnStack = mOpenSellOrders.size();
+                        PrintWriter writer = new PrintWriter("prev_sell_orders.txt", "UTF-8");
+                        for (int x = 0; x < numItemsOnStack; ++x)
+                        {
+                            NewLimitOrderSingle order = mOpenSellOrders.pop();
+                            writer.println(order.getSize() + ":" + order.getPrice());
+                        }
+                        writer.close();
+                    }
+                    catch (Exception e)
+                    {
+                        // Intentionally empty
+                    }
+                }
+            });
+        }
+    }
+
+
+
+
+    /**
+    * Read in sell orders from the last time we shut down.
+    */
+    private static void readInSellOrdrersFromLastShutdown(Trader trader)
+    {
+        try
+        {
+            URI uri = trader.getClass().getResource("prev_sell_orders.txt").toURI();
+            List<String> lines = Files.readAllLines(Paths.get(uri), Charset.defaultCharset());
+
+            // We wrote out from stack top to bottom so when we read in need to reverse
+            // to push back on in the right order.
+            Collections.reverse(lines);
+            for (String line : lines)
+            {
+                if (line.contains(":"))
+                {
+                    NewLimitOrderSingle order = new NewLimitOrderSingle();
+                    String tokens[] = line.split(":");
+                    order.setSize(new BigDecimal(tokens[0]));
+                    order.setPrice(new BigDecimal(tokens[1]));
+                    order.setSide("sell");
+                    mOpenSellOrders.push(order);
+                }
+            }
+        }
+        catch (Exception e)
+        {
+            // Intentionally empty
+        }
+    }
+
+
+   
+    /**
+    * Prompt for login information and initiate exchange object.
+    */ 
     private static void getCredentialsAndInitializeServices(JFrame frame)
     {
         String key = (String)JOptionPane.showInputDialog(frame, "Public Key", "", JOptionPane.PLAIN_MESSAGE);
@@ -227,6 +204,9 @@ public class Trader
     
 
 
+    /**
+    * The main thread to process market informtion and place buy/sell orders.
+    */
     private static class RefreshExchangeInformation implements Runnable
     {
         private Thread t;
@@ -238,12 +218,11 @@ public class Trader
                 try
                 {
                     checkOrderStatus();
-                    Thread.sleep(Integer.parseInt(mPollingField.getText()) * 1000 * 60);
+                    Thread.sleep(mTraderWindow.getNextPollingInterval());
                 }
                 catch (Exception e)
                 {
-                    mErrorLabel.setText(e.getMessage());
-                    mErrorLabel.invalidate();
+                    mTraderWindow.setErrorText(e.getMessage());
                     for (int x = 0; x < e.getStackTrace().length; ++x)
                     {
                         System.out.println(e.getStackTrace()[x].toString());
@@ -271,36 +250,14 @@ public class Trader
     private static void checkOrderStatus()
         throws Exception
     {
-        NumberFormat currencyFormat = NumberFormat.getCurrencyInstance();
-
-        mUSDAccount = mAccountService.getAccount("0bbece32-37d9-4180-99a5-7b6381e5c114");
-        mAvailableCashLabel.setText(currencyFormat.format(mUSDAccount.getAvailable())); 
-
-        MarketData marketData = mMarketDataService.getMarketDataOrderBook("BTC-USD", "");
-       
-        if (marketData.getBids().size() > 0)
-        {
-            mCurrentBid = marketData.getBids().get(0).getPrice(); 
-            mBidLabel.setText(currencyFormat.format(marketData.getBids().get(0).getPrice()));
-
-            if (null == mHighestBidSeen || mCurrentBid.compareTo(mHighestBidSeen) == 1)
-            {
-                mHighestBidSeen = mCurrentBid;
-                mHighestBidLabel.setText(currencyFormat.format(mHighestBidSeen));
-            }
-        }
-
-        if (marketData.getAsks().size() > 0)
-        {
-            mCurrentAsk = marketData.getAsks().get(0).getPrice();
-            mAskLabel.setText(currencyFormat.format(marketData.getAsks().get(0).getPrice()));
-        }
+        getMarketData();
 
         List<Order> openOrders = mOrderService.getOpenOrders();
         checkSellOrders(openOrders);
         checkBuyOrders(openOrders);
-    
-        mLastUpdatedLabel.setText("Last Update: " + new Date().toString());
+
+        mTraderWindow.setMarketData(mAvailableBalance, mHighestBidSeen, mCurrentBid, mCurrentAsk);
+        mTraderWindow.setLastUpdatedText(new Date());
     } 
 
 
@@ -327,16 +284,14 @@ public class Trader
         {
             while (sellOrders.size() < mOpenSellOrders.size())
             {
-                NewLimitOrderSingle order = mOpenSellOrders.pop();
+                mLastFulfilledSell = mOpenSellOrders.pop();
+                
                 Date date = new Date();
-                writeOrderToDisk(order, date);
-                writeOrderToScreen(order, date);
-                mLastFulfilledSell = order;
+                writeOrderToDisk(mLastFulfilledSell, date);
+                mTraderWindow.writeOrderToScreen(mLastFulfilledSell, date);
             }
         }
-        NewLimitOrderSingle[] tempSells = new NewLimitOrderSingle[mOpenSellOrders.size()];
-        mOpenSellOrders.copyInto(tempSells);
-        mSellTableModel.setData(tempSells);
+        mTraderWindow.displayCurrentSellOrders(mOpenSellOrders);
     }
 
     /**
@@ -354,11 +309,12 @@ public class Trader
         if (mLastFulfilledSell != null && mCurrentBuyOrder != null && buyOrders.size() == 1)
         {
             clearBuyOrders(buyOrders);
+            getAvailableBalance();
         }
 
         if (buyOrders.size() > 1)
         {
-            mErrorLabel.setText("You have more than one buy order open!!");
+            mTraderWindow.setErrorText("You have more than one buy order open!!");
             clearBuyOrders(buyOrders);
         }
         else if (buyOrders.size() == 1)
@@ -368,7 +324,7 @@ public class Trader
                     (mCurrentBuyOrder.getSize().doubleValue() != tempOrder.getSize().doubleValue() ||
                      mCurrentBuyOrder.getPrice().doubleValue() != tempOrder.getPrice().doubleValue()))
             {
-                mErrorLabel.setText("Your current buy order does not match the one you have in memory!!");
+                mTraderWindow.setErrorText("Your current buy order does not match the one you have in memory!!");
                 clearBuyOrders(buyOrders);
             }
             else
@@ -383,11 +339,9 @@ public class Trader
                 }
                 else
                 {
-                    Order order = buyOrders.get(0); 
-                    mCurrentBuyOrderId = order.getId();
-                    mCurrentBuyOrder = new NewLimitOrderSingle(order); 
-                    mBuyTableModel.setData(mCurrentBuyOrder);
-                    mCancelBuyOrderButton.setEnabled(true);
+                    mCurrentBuyOrderId = buyOrders.get(0).getId();
+                    mCurrentBuyOrder = new NewLimitOrderSingle(buyOrders.get(0)); 
+                    mTraderWindow.displayCurrentBuyOrder(mCurrentBuyOrder);
                 }
             }
         }
@@ -399,7 +353,7 @@ public class Trader
             {
                 Date date = new Date();
                 writeOrderToDisk(mCurrentBuyOrder, date);
-                writeOrderToScreen(mCurrentBuyOrder, date);
+                mTraderWindow.writeOrderToScreen(mCurrentBuyOrder, date);
 
                 double lastBuyPrice = mCurrentBuyOrder.getPrice().doubleValue();
 
@@ -412,13 +366,11 @@ public class Trader
                 if (returnedSellOrder != null && !returnedSellOrder.getStatus().equals("rejected"))
                 {
                     mOpenSellOrders.push(new NewLimitOrderSingle(returnedSellOrder));
-                    NewLimitOrderSingle[] tempSells = new NewLimitOrderSingle[mOpenSellOrders.size()];
-                    mOpenSellOrders.copyInto(tempSells);
-                    mSellTableModel.setData(tempSells);
+                    mTraderWindow.displayCurrentSellOrders(mOpenSellOrders);
                 
                     double buyTargetPrice = lastBuyPrice - (lastBuyPrice * targetBuyPercentages[mOpenSellOrders.size()]);
                     long buyLimitPrice = Math.round((Math.min(buyTargetPrice, mCurrentBid.doubleValue()) - 5));
-                    double dollarAmount = mUSDAccount.getAvailable().doubleValue() * .2;
+                    double dollarAmount = mAvailableBalance.doubleValue() * .2;
                     double buyOrderSize = dollarAmount / buyLimitPrice;
 
 
@@ -427,18 +379,17 @@ public class Trader
                     {
                         mCurrentBuyOrderId = returnedBuyOrder.getId();
                         mCurrentBuyOrder = new NewLimitOrderSingle(returnedBuyOrder);
-                        mBuyTableModel.setData(mCurrentBuyOrder);
-                        mCancelBuyOrderButton.setEnabled(true);
+                        mTraderWindow.displayCurrentBuyOrder(mCurrentBuyOrder);
                     }
                     else
                     {
-                        mErrorLabel.setText("Something went wrong with submitting new buy order!!");
+                        mTraderWindow.setErrorText("Something went wrong with submitting new buy order!!");
                         mDone = true;
                     }
                 }
                 else
                 {
-                    mErrorLabel.setText("Something went wrong with submitting new sell order!!");
+                    mTraderWindow.setErrorText("Something went wrong with submitting new sell order!!");
                     mDone = true;
                 }
             }
@@ -463,7 +414,7 @@ public class Trader
 
                 if (buyLimitPrice != -1)
                 {
-                    double dollarAmount = mUSDAccount.getAvailable().doubleValue() * .2;
+                    double dollarAmount = mAvailableBalance.doubleValue() * .2;
                     double buyOrderSize = dollarAmount / buyLimitPrice;
                 
                     Order returnedBuyOrder = createOrder("buy", buyOrderSize, buyLimitPrice); 
@@ -471,8 +422,7 @@ public class Trader
                     {
                         mCurrentBuyOrderId = returnedBuyOrder.getId();
                         mCurrentBuyOrder = new NewLimitOrderSingle(returnedBuyOrder);
-                        mBuyTableModel.setData(mCurrentBuyOrder);
-                        mCancelBuyOrderButton.setEnabled(true);
+                        mTraderWindow.displayCurrentBuyOrder(mCurrentBuyOrder);
                     }
                 }
             }
@@ -480,6 +430,40 @@ public class Trader
 
         mLastFulfilledSell = null;
     }
+
+
+
+    /**
+    * Get the current ask/bid from the exchange and verify highest bid we've seen.
+    */
+    private static void getMarketData()
+    {
+        MarketData marketData = mMarketDataService.getMarketDataOrderBook("BTC-USD", "");
+       
+        if (marketData.getBids().size() > 0)
+        {
+            mCurrentBid = marketData.getBids().get(0).getPrice(); 
+            if (null == mHighestBidSeen || mCurrentBid.compareTo(mHighestBidSeen) == 1)
+            {
+                mHighestBidSeen = mCurrentBid;
+            }
+        }
+
+        if (marketData.getAsks().size() > 0)
+        {
+            mCurrentAsk = marketData.getAsks().get(0).getPrice();
+        }
+    }
+
+
+    /**
+    * Retrieve the available balance from my account.
+    */
+    private static void getAvailableBalance()
+    {
+        mAvailableBalance = mAccountService.getAccount("0bbece32-37d9-4180-99a5-7b6381e5c114").getAvailable();
+    }
+
 
 
     private static Order createOrder(String side, double orderSize, long limitPrice)
@@ -523,8 +507,7 @@ public class Trader
 
         mCurrentBuyOrderId = null;
         mCurrentBuyOrder = null;
-        mBuyTableModel.setData(mCurrentBuyOrder);
-        mCancelBuyOrderButton.setEnabled(false);
+        mTraderWindow.displayCurrentBuyOrder(mCurrentBuyOrder);
     }
 
 
@@ -554,213 +537,12 @@ public class Trader
     }
 
     
-    /**
-    * Write the given order to the filled orders text area.
-    */
-    private static void writeOrderToScreen(NewLimitOrderSingle order, Date date)
-    {
-        DateFormat dateFormat = new SimpleDateFormat("MM/dd/yyyy HH:mm:ss");
-        String outputText = dateFormat.format(date) + "\t" + order.getSide() + "\t" + order.getSize() + "\t" + order.getPrice() + "\n";
-        mFilledOrders.append(outputText); 
-    } 
-
-
-
-    public static void main(String[] args)
-    {
-        Runtime.getRuntime().addShutdownHook(new Thread() 
-        {
-            public void run()
-            {
-                try
-                {
-                    if (!TESTING)
-                    {
-                        int numItemsOnStack = mOpenSellOrders.size();
-                        PrintWriter writer = new PrintWriter("prev_sell_orders.txt", "UTF-8");
-                        for (int x = 0; x < numItemsOnStack; ++x)
-                        {
-                            NewLimitOrderSingle order = mOpenSellOrders.pop();
-                            writer.println(order.getSize() + ":" + order.getPrice());
-                        }
-                        writer.close();
-                    }
-                }
-                catch (Exception e)
-                {
-                    // Intentionally empty
-                }
-            };
-        });
-
-
-        javax.swing.SwingUtilities.invokeLater(new Runnable() 
-        {
-            public void run() 
-            {
-                try
-                {
-                    URI uri = this.getClass().getResource("prev_sell_orders.txt").toURI();
-                    List<String> lines = Files.readAllLines(Paths.get(uri), Charset.defaultCharset());
-                    Collections.reverse(lines);
-                    for (String line : lines)
-                    {
-                        if (line.contains(":"))
-                        {
-                            NewLimitOrderSingle order = new NewLimitOrderSingle();
-                            String tokens[] = line.split(":");
-                            order.setSize(new BigDecimal(tokens[0]));
-                            order.setPrice(new BigDecimal(tokens[1]));
-                            order.setSide("sell");
-                            mOpenSellOrders.push(order);
-                        }
-                    }
-                }
-                catch (Exception e)
-                {
-                    // Intentionally empty
-                }
-
-                createAndShowGUI();
-                if (!TESTING)
-                {
-                    getCredentialsAndInitializeServices(mMainFrame);
-                    RefreshExchangeInformation t = new RefreshExchangeInformation();
-                    t.start();
-                }   
-                else
-                {
-                    runTests();
-                }
-            }
-        }); 
-    }
-
-
-    private static class CancelOrderActionListener implements ActionListener
-    {
-        public void actionPerformed(ActionEvent e) 
-        {
-            if ("cancelBuyOrder".equals(e.getActionCommand())) 
-            {
-                mOrderService.cancelOrder(mCurrentBuyOrderId);
-                mCurrentBuyOrderId = null;
-                mCurrentBuyOrder = null;
-                mBuyTableModel.setData(mCurrentBuyOrder);
-                mCancelBuyOrderButton.setEnabled(false);
-            } 
-        }
-    }
-
-    private static class BuyTableModel extends AbstractTableModel
-    {
-        private NewLimitOrderSingle data;
-        private final String[] columnNames = {"Coins", "Limit Price", "Total"};
-
-        public void setData(NewLimitOrderSingle order)
-        {
-            data = order;
-            mOpenBuyTable.invalidate();
-            mOpenBuyTable.repaint();
-        }
-
-        public int getRowCount()
-        {
-            return 1;
-        }
-
-        public int getColumnCount()
-        {
-            return 3;
-        }
-
-
-        public Object getValueAt(int row, int column)
-        {
-            if (data != null)
-            {
-                if (column == 0)
-                {
-                    return data.getSize().toString();
-                }
-                else if (column == 1)
-                {
-                    return data.getPrice().toString();
-                }
-                else
-                {
-                    return String.valueOf(data.getPrice().doubleValue() *  data.getSize().doubleValue());
-                }
-            }
-            return "";
-        }
-
-        public String getColumnName(int index)
-        {
-            return columnNames[index];
-        }        
-    }
-
-
-
-
-    private static class SellTableModel extends AbstractTableModel
-    {
-        private NewLimitOrderSingle[] data;
-        private final String[] columnNames = {"Coins", "Limit Price", "Total"};
-
-        public void setData(NewLimitOrderSingle[] orders)
-        {
-            data = orders;
-            mOpenSellsTable.invalidate();
-            mOpenSellsTable.repaint();
-        }
-
-        public int getRowCount()
-        {
-            return data == null ? 0 : data.length;
-        }
-
-        public int getColumnCount()
-        {
-            return 3;
-        }
-
-
-        public Object getValueAt(int row, int column)
-        {
-            if (data != null && row < data.length)
-            {
-                if (column == 0)
-                {
-                    return data[row].getSize().toString();
-                }
-                else if (column == 1)
-                {
-                    return data[row].getPrice().toString();
-                }
-                else
-                {
-                    return String.valueOf(data[row].getPrice().doubleValue() *  data[row].getSize().doubleValue());
-                }
-            }
-            return "";
-        }
-
-        public String getColumnName(int index)
-        {
-            return columnNames[index];
-        }        
-    }
-
-     
-    
 
 
     ///////////////////////////////////////////////////////////////////////////////////////////
     // Tests
     ///////////////////////////////////////////////////////////////////////////////////////////
-    private static void runTestLoop(int numIterations)
+    /*private static void runTestLoop(int numIterations)
     {
         try
         {
@@ -1272,5 +1054,5 @@ public class Trader
         {
 			return name.toLowerCase().endsWith(".txt");
 		}
-	}
+	}*/
 }
