@@ -33,27 +33,36 @@ import javax.swing.JTextField;
 import javax.swing.table.AbstractTableModel;
 
 
+
 /**
 * Class to encapsulate the GUI for the trading bot.
 */
 public class TraderWindow extends JPanel implements ActionListener
 {
-    //private static JFrame mMainFrame = new JFrame("Trader");
-    private static JLabel mErrorLabel = new JLabel("");
-    private static JLabel mAvailableCashLabel = new JLabel();
-    private static JLabel mHighestBidLabel = new JLabel();
-    private static JLabel mBidLabel = new JLabel();
-    private static JLabel mAskLabel = new JLabel();
-    private static JTextField mPollingField = new JTextField("2");
-    private static JButton mCancelBuyOrderButton = new JButton("Cancel Buy Order");
-    private static JTable mOpenBuyTable;
-    private static BuyTableModel mBuyTableModel;
-    private static JTable mOpenSellsTable; 
-    private static SellTableModel mSellTableModel;
-    private static JTextArea mFilledOrders = new JTextArea();
-    private static JLabel mLastUpdatedLabel = new JLabel();
+
+    public interface CancelBuyOrderListener
+    {
+        public void buyOrderCanceled();
+    }
+
+    private JLabel mErrorLabel = new JLabel("");
+    private JLabel mAvailableCashLabel = new JLabel();
+    private JLabel mHighestBidLabel = new JLabel();
+    private JLabel mBidLabel = new JLabel();
+    private JLabel mAskLabel = new JLabel();
+    private JTextField mPollingField = new JTextField("2");
+    private JButton mCancelBuyOrderButton = new JButton("Cancel Buy Order");
+    private JTable mOpenBuyTable;
+    private BuyTableModel mBuyTableModel;
+    private JTable mOpenSellsTable; 
+    private SellTableModel mSellTableModel;
+    private JTextArea mFilledOrders = new JTextArea();
+    private JLabel mLastUpdatedLabel = new JLabel();
 
     DateFormat mDateFormat = new SimpleDateFormat("M/dd/yyyy HH:mm:ss");
+
+
+    private CancelBuyOrderListener mCancelBuyOrderListener;
     
 
     public TraderWindow()
@@ -66,6 +75,12 @@ public class TraderWindow extends JPanel implements ActionListener
         createOutstandingOrdersPanel();
         createFilledOrdersPanel();
     }
+
+   
+    public void setCancelBuyOrderListener(CancelBuyOrderListener listener)
+    {
+        mCancelBuyOrderListener = listener;
+    } 
 
 
     public Integer getNextPollingInterval()
@@ -125,10 +140,7 @@ public class TraderWindow extends JPanel implements ActionListener
     {
         if ("cancelBuyOrder".equals(e.getActionCommand())) 
         {
-            //mOrderService.cancelOrder(mCurrentBuyOrderId);
-            //mCurrentBuyOrderId = null;
-            //mCurrentBuyOrder = null;
-            //mBuyTableModel.setData(mCurrentBuyOrder);
+            mCancelBuyOrderListener.buyOrderCanceled();
             mCancelBuyOrderButton.setEnabled(false);
         } 
     }
@@ -267,12 +279,12 @@ public class TraderWindow extends JPanel implements ActionListener
     /**
     * Table model to display the current outstanding buy order
     */
-    private static class BuyTableModel extends AbstractTableModel
+    private class BuyTableModel extends AbstractTableModel
     {
         private NewLimitOrderSingle order;
         private String[] data = new String[3];
 
-        private static final String[] columnNames = {"Coins", "Limit Price", "Total"};
+        private final String[] columnNames = {"Coins", "Limit Price", "Total"};
 
         public void setData(NewLimitOrderSingle order)
         {
@@ -304,7 +316,7 @@ public class TraderWindow extends JPanel implements ActionListener
     /**
     * Table model to display outstanding sell orders.
     */
-    private static class SellTableModel extends AbstractTableModel
+    private class SellTableModel extends AbstractTableModel
     {
         private NewLimitOrderSingle[] data;
         private final String[] columnNames = {"Coins", "Limit Price", "Total"};

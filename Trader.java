@@ -45,7 +45,7 @@ import javax.swing.JOptionPane;
 
 
 
-public class Trader 
+public class Trader implements TraderWindow.CancelBuyOrderListener
 {
     private final static boolean TESTING = true;
 
@@ -91,6 +91,7 @@ public class Trader
                     TraderWindow traderWindow = new TraderWindow();
 
                     Trader trader = new Trader(traderWindow);
+                    traderWindow.setCancelBuyOrderListener(trader);
                     trader.addShutdownHookToWriteExistingSellOrdersOnProgramExit();
                     trader.readInSellOrdrersFromLastShutdown();
 
@@ -557,7 +558,7 @@ public class Trader
     *   * we had a sell order that went through and we need to cancel outstanding buy order at lower level
     *   * we have a single buy order, no sell orders, and the BTC price has gone up too far from our buy order
     */
-    private void clearBuyOrders(List<Order> buyOrders)
+    public void clearBuyOrders(List<Order> buyOrders)
     {
         for (Order order : buyOrders)
         {
@@ -565,10 +566,21 @@ public class Trader
         }
         buyOrders.clear();
 
+        mOrderService.cancelOrder(mCurrentBuyOrderId);
         mCurrentBuyOrderId = null;
         mCurrentBuyOrder = null;
         mTraderWindow.displayCurrentBuyOrder(mCurrentBuyOrder);
     }
+
+
+    public void buyOrderCanceled()
+    {
+        mOrderService.cancelOrder(mCurrentBuyOrderId);
+        mCurrentBuyOrderId = null;
+        mCurrentBuyOrder = null;
+        mTraderWindow.displayCurrentBuyOrder(mCurrentBuyOrder);
+    }
+    
 
 
 
