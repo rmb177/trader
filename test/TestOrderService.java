@@ -12,12 +12,13 @@ import java.util.stream.Collectors;
 public class TestOrderService implements OrderServiceInterface
 {
     private List<Order> orders;
-    private static int id = 0; 
+    private static int id = 10; 
 
     public TestOrderService(List<Order> orders)
     {
         this.orders = orders;
     }
+
 
     public Order createOrder(NewOrderSingle order)
     {
@@ -28,11 +29,7 @@ public class TestOrderService implements OrderServiceInterface
         newOrder.setPrice(limitOrder.getPrice().toString());
         newOrder.setStatus("pending");
         newOrder.setSide(order.getSide());
-
-        if (order.getSide().equals("sell"))
-        {
-            orders.add(newOrder);
-        }
+        orders.add(newOrder);
   
         return newOrder;
     } 
@@ -50,24 +47,18 @@ public class TestOrderService implements OrderServiceInterface
 
 
 
-    // Testing function to mimic a sell order going through on the server.
-    public void fulfillLastSellOrder()
+    // Testing function to allow us to remove the last order of the given type
+    // to simulate that the order was filled.
+    public void fulfillLastOrder(String type)
     {
-        orders.remove(orders.size() - 1);
-    }
-
-
-    // Testinf function to allow us to not fulfill buys
-    public void addBackBuyOrder(NewOrderSingle order)
-    {
-        NewLimitOrderSingle limitOrder = (NewLimitOrderSingle)order;
-        Order newOrder = new Order();
-        newOrder.setSize(limitOrder.getSize().toString());
-        newOrder.setId(String.valueOf(++id));
-        newOrder.setPrice(limitOrder.getPrice().toString());
-        newOrder.setStatus("pending");
-        newOrder.setSide(order.getSide());
-        orders.add(newOrder);
+        for (int x = orders.size() - 1; x >= 0; --x)
+        {
+            if (orders.get(x).getSide().equals(type))
+            {
+                orders.remove(x);
+                break;
+            }
+        }
     }
 }
 

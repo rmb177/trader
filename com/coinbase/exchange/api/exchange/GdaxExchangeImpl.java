@@ -28,6 +28,7 @@ public class GdaxExchangeImpl implements GdaxExchange
     String publicKey;
     String passphrase;
     String baseUrl;
+    String mTimestamp;
 
     Signature signature;
 
@@ -128,14 +129,14 @@ public class GdaxExchangeImpl implements GdaxExchange
     public HttpEntity<String> securityHeaders(String endpoint, String method, String jsonBody) {
         HttpHeaders headers = new HttpHeaders();
 
-        String timestamp = Instant.now().getEpochSecond() + "";
+        //String timestamp = Instant.now().getEpochSecond() + "";
         String resource = endpoint.replace(getBaseUrl(), "");
 
         headers.add("accept", "application/json");
         headers.add("content-type", "application/json");
         headers.add("CB-ACCESS-KEY", publicKey);
-        headers.add("CB-ACCESS-SIGN", signature.generate(resource, method, jsonBody, timestamp));
-        headers.add("CB-ACCESS-TIMESTAMP", timestamp);
+        headers.add("CB-ACCESS-SIGN", signature.generate(resource, method, jsonBody, mTimestamp));
+        headers.add("CB-ACCESS-TIMESTAMP", mTimestamp);
         headers.add("CB-ACCESS-PASSPHRASE", passphrase);
 
         curlRequest(method, jsonBody, headers, resource);
@@ -153,5 +154,10 @@ public class GdaxExchangeImpl implements GdaxExchange
 
         curlTest += "-X " + method + " " + getBaseUrl() + resource;
         //log.debug(curlTest);
+    }
+
+    public void setTimestamp(String timestamp)
+    {
+        mTimestamp = timestamp;
     }
 }
