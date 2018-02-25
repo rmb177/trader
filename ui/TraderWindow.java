@@ -152,7 +152,7 @@ public class TraderWindow extends JPanel implements ActionListener
     public void writeOrderToScreen(NewLimitOrderSingle order, Date date)
     {
         String outputText = mDateFormat.format(date) + "\t" + order.getSide() + "\t" + order.getSize() + "\t" + order.getPrice() + "\n";
-        mFilledOrders.append(outputText); 
+        mFilledOrders.insert(outputText, 0); 
     } 
 
 

@@ -1,4 +1,3 @@
-
 import com.coinbase.exchange.api.accounts.AccountServiceInterface;
 import com.coinbase.exchange.api.entity.NewLimitOrderSingle;
 import com.coinbase.exchange.api.marketdata.MarketDataServiceInterface;

@@ -14,7 +14,6 @@ import com.coinbase.exchange.api.orders.OrderServiceInterface;
 
 import org.springframework.web.client.RestTemplate;
 
-
 import ui.TraderWindow;
 
 import java.io.BufferedReader;
@@ -61,6 +60,7 @@ public class Trader implements TraderWindow.CancelBuyOrderListener
     private MarketDataServiceInterface mMarketDataService;
     private OrderServiceInterface mOrderService;
 
+    private String mAccountNumber;
     private BigDecimal mAvailableBalance;
     private BigDecimal mHighestBidSeen;
     private BigDecimal mCurrentBid;
@@ -219,6 +219,7 @@ public class Trader implements TraderWindow.CancelBuyOrderListener
     */ 
     private void getCredentialsAndInitializeServices(JFrame frame)
     {
+        mAccountNumber = (String)JOptionPane.showInputDialog(frame, "Account Number", "", JOptionPane.PLAIN_MESSAGE);
         String key = (String)JOptionPane.showInputDialog(frame, "Public Key", "", JOptionPane.PLAIN_MESSAGE);
         String passPhrase = (String)JOptionPane.showInputDialog(frame, "Passphrase", "", JOptionPane.PLAIN_MESSAGE);
         String secret = (String)JOptionPane.showInputDialog(frame, "Secret", "", JOptionPane.PLAIN_MESSAGE);
@@ -520,7 +521,7 @@ public class Trader implements TraderWindow.CancelBuyOrderListener
     */
     private void getAvailableBalance()
     {
-        mAvailableBalance = mAccountService.getAccount("0bbece32-37d9-4180-99a5-7b6381e5c114").getAvailable();
+        mAvailableBalance = mAccountService.getAccount(mAccountNumber).getAvailable();
     }
 
 
