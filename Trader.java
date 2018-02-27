@@ -297,6 +297,10 @@ public class Trader implements TraderWindow.CancelBuyOrderListener
 
         mTraderWindow.setMarketData(mAvailableBalance, mHighestBidSeen, mCurrentBid, mCurrentAsk);
         mTraderWindow.setLastUpdatedText(new Date());
+        mTraderWindow.displayCurrentBuyOrder(mCurrentBuyOrder);
+        mTraderWindow.displayCurrentSellOrders(mOpenSellOrders);
+
+        mLastFulfilledSell = null;
     } 
 
 
@@ -330,7 +334,6 @@ public class Trader implements TraderWindow.CancelBuyOrderListener
                 mTraderWindow.writeOrderToScreen(mLastFulfilledSell, date);
             }
         }
-        mTraderWindow.displayCurrentSellOrders(mOpenSellOrders);
     }
 
     /**
@@ -347,32 +350,14 @@ public class Trader implements TraderWindow.CancelBuyOrderListener
             clearBuyOrders(buyOrders);
         }
 
-        // Get available balance after potentially canceling order that way we have that $ available.
+        // Get available balance after potentially canceling order that way we have $ from that order available.
         getAvailableBalance();
 
-
-        if (buyOrders.size() > 1)
+        if (noProblemsWithBuyOrders(buyOrders))
         {
-            mTraderWindow.setErrorText("You have more than one buy order open!!");
-            clearBuyOrders(buyOrders);
-        }
-        else if (buyOrders.size() == 1)
-        {
-            NewLimitOrderSingle tempOrder = new NewLimitOrderSingle(buyOrders.get(0));
-            if (mCurrentBuyOrder != null &&
-                    (mCurrentBuyOrder.getSize().doubleValue() != tempOrder.getSize().doubleValue() ||
-                     mCurrentBuyOrder.getPrice().doubleValue() != tempOrder.getPrice().doubleValue()))
+            if (buyOrders.size() == 1)
             {
-                mTraderWindow.setErrorText("Your current buy order does not match the one you have in memory!!");
-                clearBuyOrders(buyOrders);
-            }
-            else
-            {
-                if (mCurrentAsk != null &&
-                    mCurrentBuyOrder != null &&
-                    mOpenSellOrders.size() == 0 &&
-                        mCurrentAsk.doubleValue() >= 
-                        (mCurrentBuyOrder.getPrice().doubleValue() + (mCurrentBuyOrder.getPrice().doubleValue() * MAX_HIGH_BID_REACHED_BEFORE_CANCELING_LONE_BUY_ORDER)))
+                if (bidHasRisenTooMuchFromCurrentBuyOrder())
                 {
                     clearBuyOrders(buyOrders);
                 }
@@ -380,89 +365,79 @@ public class Trader implements TraderWindow.CancelBuyOrderListener
                 {
                     mCurrentBuyOrderId = buyOrders.get(0).getId();
                     mCurrentBuyOrder = new NewLimitOrderSingle(buyOrders.get(0)); 
-                    mTraderWindow.displayCurrentBuyOrder(mCurrentBuyOrder);
                 }
             }
-        }
-        else if (buyOrders.size() == 0)
-        {
-            // We had a buy order and now don't so it went through. Write it out to disk and create the next order
-            if (mCurrentBuyOrder != null)
+            else if (buyOrders.size() == 0)
             {
-                Date date = new Date();
-                writeOrderToDisk(mCurrentBuyOrder, date);
-                mTraderWindow.writeOrderToScreen(mCurrentBuyOrder, date);
-
-                double lastBuyPrice = mCurrentBuyOrder.getPrice().doubleValue();
-
-                // Create sell order
-                double sellTargetPercentIncrease = targetSellPercentages[mOpenSellOrders.size() % 3]; 
-                double sellTargetPrice = lastBuyPrice + (lastBuyPrice * sellTargetPercentIncrease);
-                long sellLimitPrice = Math.round((Math.max(sellTargetPrice, mCurrentAsk.doubleValue()) + 2));
-
-                Order returnedSellOrder = createOrder("sell", mCurrentBuyOrder.getSize().doubleValue(), (int)sellLimitPrice); 
-                if (returnedSellOrder != null && !returnedSellOrder.getStatus().equals("rejected"))
+                // We had a buy order and now don't so it went through. Write it out to disk and create the next order
+                if (mCurrentBuyOrder != null)
                 {
-                    mOpenSellOrders.push(new NewLimitOrderSingle(returnedSellOrder));
-                    mTraderWindow.displayCurrentSellOrders(mOpenSellOrders);
-                
-                    double buyTargetPrice = lastBuyPrice - (lastBuyPrice * targetBuyPercentages[mOpenSellOrders.size() % 3]);
-                    long buyLimitPrice = Math.round((Math.min(buyTargetPrice, mCurrentBid.doubleValue()) - 2));
-                    double dollarAmount = mAvailableBalance.doubleValue() * PERCENT_OF_BALANCE_FOR_PURCHASE;
-                    double buyOrderSize = dollarAmount / buyLimitPrice;
+                    Date date = new Date();
+                    writeOrderToDisk(mCurrentBuyOrder, date);
+                    mTraderWindow.writeOrderToScreen(mCurrentBuyOrder, date);
 
-                    Order returnedBuyOrder = createOrder("buy", buyOrderSize, (int)buyLimitPrice); 
-                    if (returnedBuyOrder != null && !returnedBuyOrder.getStatus().equals("rejected"))
+                    double lastBuyPrice = mCurrentBuyOrder.getPrice().doubleValue();
+
+                    // Create sell order
+                    double sellTargetPercentIncrease = targetSellPercentages[mOpenSellOrders.size() % 3]; 
+                    double sellTargetPrice = lastBuyPrice + (lastBuyPrice * sellTargetPercentIncrease);
+                    long sellLimitPrice = Math.round((Math.max(sellTargetPrice, mCurrentAsk.doubleValue()) + 2));
+
+                    Order returnedSellOrder = createOrder("sell", mCurrentBuyOrder.getSize().doubleValue(), sellLimitPrice); 
+                    if (returnedSellOrder != null && !returnedSellOrder.getStatus().equals("rejected"))
                     {
-                        mCurrentBuyOrderId = returnedBuyOrder.getId();
-                        mCurrentBuyOrder = new NewLimitOrderSingle(returnedBuyOrder);
-                        mTraderWindow.displayCurrentBuyOrder(mCurrentBuyOrder);
+                        mOpenSellOrders.push(new NewLimitOrderSingle(returnedSellOrder));
+                
+                        double buyTargetPrice = lastBuyPrice - (lastBuyPrice * targetBuyPercentages[mOpenSellOrders.size() % 3]);
+                        long buyLimitPrice = Math.round((Math.min(buyTargetPrice, mCurrentBid.doubleValue()) - 2));
+
+                        Order returnedBuyOrder = createBuyOrder(buyLimitPrice); 
+                        if (returnedBuyOrder != null && !returnedBuyOrder.getStatus().equals("rejected"))
+                        {
+                            mCurrentBuyOrderId = returnedBuyOrder.getId();
+                            mCurrentBuyOrder = new NewLimitOrderSingle(returnedBuyOrder);
+                        }
+                        else
+                        {
+                            mTraderWindow.setErrorText("Something went wrong with submitting new buy order!!");
+                            mDone = true;
+                        }
                     }
                     else
                     {
-                        mTraderWindow.setErrorText("Something went wrong with submitting new buy order!!");
+                        mTraderWindow.setErrorText("Something went wrong with submitting new sell order!!");
                         mDone = true;
                     }
                 }
                 else
                 {
-                    mTraderWindow.setErrorText("Something went wrong with submitting new sell order!!");
-                    mDone = true;
-                }
-            }
-            else
-            {
-                long buyLimitPrice = -1;
+                    long buyLimitPrice = -1;
 
-                // Create new order off sell order for previous buy
-                if (mOpenSellOrders.size() > 0 && mCurrentBid != null)
-                {
-                    // UPDATE ME AT SOME POINT SHOULD WE WRITE OUT LAST FULFILLED SELL AT SHUTDOWN 
-                    double valueToUse = mLastFulfilledSell == null ? mCurrentBid.doubleValue() : mLastFulfilledSell.getPrice().doubleValue();
-                    double lastBuyPrice = valueToUse * (1 - targetSellPercentages[mOpenSellOrders.size() % 3]);
-                    buyLimitPrice = Math.round((Math.min(lastBuyPrice, mCurrentBid.doubleValue()) - 2));
-                }
-                else if (priceHasFallenEnoughFromHighestBidSeen())
-                {
-                    buyLimitPrice = mCurrentBid.longValue() - 2;
-                }
-
-                if (buyLimitPrice != -1)
-                {
-                    double dollarAmount = mAvailableBalance.doubleValue() * PERCENT_OF_BALANCE_FOR_PURCHASE;
-                    double buyOrderSize = dollarAmount / buyLimitPrice;
-
-                    Order returnedBuyOrder = createOrder("buy", buyOrderSize, buyLimitPrice); 
-                    if (returnedBuyOrder != null && !returnedBuyOrder.getStatus().equals("rejected"))
+                    // Create new order off sell order for previous buy
+                    if (mOpenSellOrders.size() > 0 && mCurrentBid != null)
                     {
-                        mCurrentBuyOrderId = returnedBuyOrder.getId();
-                        mCurrentBuyOrder = new NewLimitOrderSingle(returnedBuyOrder);
-                        mTraderWindow.displayCurrentBuyOrder(mCurrentBuyOrder);
+                        // UPDATE ME AT SOME POINT SHOULD WE WRITE OUT LAST FULFILLED SELL AT SHUTDOWN 
+                        double valueToUse = mLastFulfilledSell == null ? mCurrentBid.doubleValue() : mLastFulfilledSell.getPrice().doubleValue();
+                        double lastBuyPrice = valueToUse * (1 - targetSellPercentages[mOpenSellOrders.size() % 3]);
+                        buyLimitPrice = Math.round((Math.min(lastBuyPrice, mCurrentBid.doubleValue()) - 2));
+                    }
+                    else if (priceHasFallenEnoughFromHighestBidSeen())
+                    {
+                        buyLimitPrice = mCurrentBid.longValue() - 2;
+                    }
+
+                    if (buyLimitPrice != -1)
+                    {
+                        Order returnedBuyOrder = createBuyOrder(buyLimitPrice); 
+                        if (returnedBuyOrder != null && !returnedBuyOrder.getStatus().equals("rejected"))
+                        {
+                            mCurrentBuyOrderId = returnedBuyOrder.getId();
+                            mCurrentBuyOrder = new NewLimitOrderSingle(returnedBuyOrder);
+                        }
                     }
                 }
             }
         }
-        mLastFulfilledSell = null;
     }
 
 
@@ -474,6 +449,51 @@ public class Trader implements TraderWindow.CancelBuyOrderListener
     {
         return mLastFulfilledSell != null && mCurrentBuyOrder != null && buyOrders.size() == 1;
     }
+
+
+
+    /**
+    * Check to make sure there aren't multiple buy orders or if there is
+    * only one order, make sure the id matches the one we have.
+    */
+    private boolean noProblemsWithBuyOrders(List<Order> buyOrders)
+    {
+        boolean noProblems = true;
+        if (buyOrders.size() > 1)
+        {
+            mTraderWindow.setErrorText("You have more than one buy order open!!");
+            clearBuyOrders(buyOrders);
+            noProblems = false;
+        }
+        else if (buyOrders.size() == 1)
+        {
+            NewLimitOrderSingle tempOrder = new NewLimitOrderSingle(buyOrders.get(0));
+            if (mCurrentBuyOrder != null &&
+                    (mCurrentBuyOrder.getSize().doubleValue() != tempOrder.getSize().doubleValue() ||
+                     mCurrentBuyOrder.getPrice().doubleValue() != tempOrder.getPrice().doubleValue()))
+            {
+                mTraderWindow.setErrorText("Your current buy order does not match the one you have in memory!!");
+                clearBuyOrders(buyOrders);
+                noProblems = false;
+            }
+        }
+        return noProblems;
+    }
+
+
+    /**
+    * We don't have any open sell orders and the current bid price has risen over 1% of our current
+    * buy limit. In this case we just cancel buy order and put in another buy order at a higher price.
+    */
+    private boolean bidHasRisenTooMuchFromCurrentBuyOrder()
+    {
+        return mCurrentAsk != null              &&
+                mCurrentBuyOrder != null        &&
+                mOpenSellOrders.size() == 0     &&
+                    mCurrentAsk.doubleValue() >=
+                     (mCurrentBuyOrder.getPrice().doubleValue() + (mCurrentBuyOrder.getPrice().doubleValue() * MAX_HIGH_BID_REACHED_BEFORE_CANCELING_LONE_BUY_ORDER));
+    }
+
 
 
     /**
@@ -525,29 +545,40 @@ public class Trader implements TraderWindow.CancelBuyOrderListener
     }
 
 
+    /**
+    * Create a new buy order
+    */
+    private Order createBuyOrder(long limitPrice)
+    {
+        Order order = null;
 
+        double dollarAmount = mAvailableBalance.doubleValue() * PERCENT_OF_BALANCE_FOR_PURCHASE;
+        double orderSize = dollarAmount / limitPrice;
+
+        if (orderSize >= MIN_BTC && orderSize * limitPrice >= MIN_USD)
+        {
+            order = createOrder("buy", orderSize, limitPrice);
+        }
+        return order;
+    }
+
+    /**
+    * Create a new buy/sell order with the given limit price
+    */
     private Order createOrder(String side, double orderSize, long limitPrice)
     {
-        if (side.equals("buy") &&
-            (orderSize < MIN_BTC || orderSize * limitPrice < MIN_USD))
-        {
-            return null;
-        }
-        else
-        {
-            DecimalFormat df = new DecimalFormat("#.#####");
-            df.setRoundingMode(RoundingMode.DOWN);
+        DecimalFormat df = new DecimalFormat("#.#####");
+        df.setRoundingMode(RoundingMode.DOWN);
 
-            NewLimitOrderSingle newOrder = new NewLimitOrderSingle();
-            newOrder.setSide(side);
-            newOrder.setProduct_id("BTC-USD");
-            newOrder.setType("limit");
-            newOrder.setPost_only(true);
-            newOrder.setSize(new BigDecimal(df.format(orderSize)));
-            newOrder.setPrice(new BigDecimal(limitPrice));
+        NewLimitOrderSingle newOrder = new NewLimitOrderSingle();
+        newOrder.setSide(side);
+        newOrder.setProduct_id("BTC-USD");
+        newOrder.setType("limit");
+        newOrder.setPost_only(true);
+        newOrder.setSize(new BigDecimal(df.format(orderSize)));
+        newOrder.setPrice(new BigDecimal(limitPrice));
 
-            return mOrderService.createOrder(newOrder);
-        }
+        return mOrderService.createOrder(newOrder);
     }
 
 
@@ -570,7 +601,6 @@ public class Trader implements TraderWindow.CancelBuyOrderListener
         mOrderService.cancelOrder(mCurrentBuyOrderId);
         mCurrentBuyOrderId = null;
         mCurrentBuyOrder = null;
-        mTraderWindow.displayCurrentBuyOrder(mCurrentBuyOrder);
     }
 
 
@@ -579,7 +609,6 @@ public class Trader implements TraderWindow.CancelBuyOrderListener
         mOrderService.cancelOrder(mCurrentBuyOrderId);
         mCurrentBuyOrderId = null;
         mCurrentBuyOrder = null;
-        mTraderWindow.displayCurrentBuyOrder(mCurrentBuyOrder);
     }
     
 
