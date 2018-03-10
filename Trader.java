@@ -50,8 +50,7 @@ public class Trader implements TraderWindow.CancelBuyOrderListener
 
     private final static double MIN_USD = 10.00;
     private final static double MIN_BTC = 0.001;
-    private final static double PERCENT_OF_BALANCE_FOR_PURCHASE = 0.1;
-    private static boolean mDone;
+    private static boolean mErrorCreatingOrder;
     
     private TraderWindow mTraderWindow;
 
@@ -72,8 +71,10 @@ public class Trader implements TraderWindow.CancelBuyOrderListener
     private NewLimitOrderSingle mLastFulfilledSell = null;
 
    
-    private static double[] targetBuyPercentages =  {0.0050, 0.0100, 0.02};
-    private static double[] targetSellPercentages = {0.0050, 0.0050, 0.01};
+    private final static double[] targetBuyPercentages            = {0.0050, 0.0050, 0.0100, 0.0150};
+    private final static double[] targetSellPercentages           = {0.0050, 0.0050, 0.0050, 0.0100};
+
+    private final static double[] percentBalanceToUseForPurchase  = {0.2, 0.15, 0.1, 0.1};
 
 
     private static final double MAX_HIGH_BID_REACHED_BEFORE_CANCELING_LONE_BUY_ORDER = 0.01; 
@@ -251,13 +252,25 @@ public class Trader implements TraderWindow.CancelBuyOrderListener
 
         public void run()
         {
-            while (!mDone)
+            while (true)
             {
                 try
                 {
                     mTrader.synchOurTimeWithServer();
                     mTrader.checkOrderStatus();
-                    Thread.sleep(mTraderWindow.getNextPollingInterval());
+
+                    if (!mErrorCreatingOrder)
+                    {
+                        Thread.sleep(mTraderWindow.getNextPollingInterval());
+                    }
+                    else
+                    {
+                        // If we had an error creating an order (usually because we've reached
+                        // min US/BTC amount, sleep for 10 minutes until we try again.
+                        Thread.sleep(1000 * 60 * 10);
+                        mErrorCreatingOrder = false;
+                    }
+
                 }
                 catch (Exception e)
                 {
@@ -379,7 +392,7 @@ public class Trader implements TraderWindow.CancelBuyOrderListener
                     double lastBuyPrice = mCurrentBuyOrder.getPrice().doubleValue();
 
                     // Create sell order
-                    double sellTargetPercentIncrease = targetSellPercentages[mOpenSellOrders.size() % 3]; 
+                    double sellTargetPercentIncrease = targetSellPercentages[mOpenSellOrders.size() % 4]; 
                     double sellTargetPrice = lastBuyPrice + (lastBuyPrice * sellTargetPercentIncrease);
                     long sellLimitPrice = Math.round((Math.max(sellTargetPrice, mCurrentAsk.doubleValue()) + 2));
 
@@ -387,8 +400,8 @@ public class Trader implements TraderWindow.CancelBuyOrderListener
                     if (returnedSellOrder != null && !returnedSellOrder.getStatus().equals("rejected"))
                     {
                         mOpenSellOrders.push(new NewLimitOrderSingle(returnedSellOrder));
-                
-                        double buyTargetPrice = lastBuyPrice - (lastBuyPrice * targetBuyPercentages[mOpenSellOrders.size() % 3]);
+               
+                        double buyTargetPrice = lastBuyPrice - (lastBuyPrice * targetBuyPercentages[mOpenSellOrders.size() % 4]);
                         long buyLimitPrice = Math.round((Math.min(buyTargetPrice, mCurrentBid.doubleValue()) - 2));
 
                         Order returnedBuyOrder = createBuyOrder(buyLimitPrice); 
@@ -400,13 +413,13 @@ public class Trader implements TraderWindow.CancelBuyOrderListener
                         else
                         {
                             mTraderWindow.setErrorText("Something went wrong with submitting new buy order!!");
-                            mDone = true;
+                            mErrorCreatingOrder = true;
                         }
                     }
                     else
                     {
                         mTraderWindow.setErrorText("Something went wrong with submitting new sell order!!");
-                        mDone = true;
+                        mErrorCreatingOrder = true;
                     }
                 }
                 else
@@ -418,7 +431,7 @@ public class Trader implements TraderWindow.CancelBuyOrderListener
                     {
                         // UPDATE ME AT SOME POINT SHOULD WE WRITE OUT LAST FULFILLED SELL AT SHUTDOWN 
                         double valueToUse = mLastFulfilledSell == null ? mCurrentBid.doubleValue() : mLastFulfilledSell.getPrice().doubleValue();
-                        double lastBuyPrice = valueToUse * (1 - targetSellPercentages[mOpenSellOrders.size() % 3]);
+                        double lastBuyPrice = valueToUse * (1 - targetSellPercentages[mOpenSellOrders.size() % 4]);
                         buyLimitPrice = Math.round((Math.min(lastBuyPrice, mCurrentBid.doubleValue()) - 2));
                     }
                     else if (priceHasFallenEnoughFromHighestBidSeen())
@@ -552,7 +565,7 @@ public class Trader implements TraderWindow.CancelBuyOrderListener
     {
         Order order = null;
 
-        double dollarAmount = mAvailableBalance.doubleValue() * PERCENT_OF_BALANCE_FOR_PURCHASE;
+        double dollarAmount = mAvailableBalance.doubleValue() * percentBalanceToUseForPurchase[(mOpenSellOrders.size() / 4) % 4];
         double orderSize = dollarAmount / limitPrice;
 
         if (orderSize >= MIN_BTC && orderSize * limitPrice >= MIN_USD)

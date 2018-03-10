@@ -197,11 +197,11 @@ public class TraderTest
     {
         System.out.println("Running runTestForSeriesOfBuysUsingPricesOfPreviousOrdersToDriveNewLimits ..."); 
 
-        double[] balances = new double[] {1000, 1000, 900, 810, 729, 656.10, 590.49, 531.441};
+        double[] balances = new double[] {1000, 1000, 800, 640, 512, 409.6, 348.16, 295.936};
         AccountServiceInterface accountService = setupTestAccountService(balances);
 
-        double[] bids = new double[] {13000, 11702, 11702, 11582, 11348, 11289, 11174, 10949};
-        double[] asks = new double[] {13001, 11703, 11703, 11583, 11349, 11290, 11175, 10950};
+        double[] bids = new double[] {13000, 11702, 11702, 11582, 11465, 11291, 11232, 11174};
+        double[] asks = new double[] {13001, 11703, 11703, 11583, 11466, 11292, 11233, 11175};
         MarketDataServiceInterface marketDataService = setupTestMarketDataService(bids, asks);
         
         OrderServiceInterface orderService = setupTestOrderService(new String[][]{});
@@ -219,7 +219,7 @@ public class TraderTest
         runTestLoop(trader, 1);
         assert(trader.getOpenSellOrders().size() == 0);
         assert(trader.getCurrentBuyOrder() != null);
-        assert(trader.getCurrentBuyOrder().getSize().doubleValue() == 0.00854);
+        assert(trader.getCurrentBuyOrder().getSize().doubleValue() == 0.01709);
         assert(trader.getCurrentBuyOrder().getPrice().doubleValue() == 11700);
 
 
@@ -228,12 +228,12 @@ public class TraderTest
         ((TestOrderService)orderService).fulfillLastOrder("buy");
         runTestLoop(trader, 1);
         assert(trader.getOpenSellOrders().size() == 1);
-        assert(trader.getOpenSellOrders().peek().getSize().doubleValue() == 0.00854);
+        assert(trader.getOpenSellOrders().peek().getSize().doubleValue() == 0.01709);
         assert(trader.getOpenSellOrders().peek().getPrice().doubleValue() == 11761);
 
         assert(trader.getCurrentBuyOrder() != null);
-        assert(trader.getCurrentBuyOrder().getSize().doubleValue() == 0.00777);
-        assert(trader.getCurrentBuyOrder().getPrice().doubleValue() == 11581);
+        assert(trader.getCurrentBuyOrder().getSize().doubleValue() == 0.01374);
+        assert(trader.getCurrentBuyOrder().getPrice().doubleValue() == 11640);
 
        
  
@@ -241,12 +241,12 @@ public class TraderTest
         ((TestOrderService)orderService).fulfillLastOrder("buy");
         runTestLoop(trader, 1);
         assert(trader.getOpenSellOrders().size() == 2);
-        assert(trader.getOpenSellOrders().peek().getSize().doubleValue() == 0.00777);
-        assert(trader.getOpenSellOrders().peek().getPrice().doubleValue() == 11641); 
+        assert(trader.getOpenSellOrders().peek().getSize().doubleValue() == 0.01374);
+        assert(trader.getOpenSellOrders().peek().getPrice().doubleValue() == 11700); 
 
         assert(trader.getCurrentBuyOrder() != null);
-        assert(trader.getCurrentBuyOrder().getSize().doubleValue() == 0.00713);
-        assert(trader.getCurrentBuyOrder().getPrice().doubleValue() == 11347);
+        assert(trader.getCurrentBuyOrder().getSize().doubleValue() == 0.0111);
+        assert(trader.getCurrentBuyOrder().getPrice().doubleValue() == 11522);
 
 
         
@@ -254,12 +254,12 @@ public class TraderTest
         ((TestOrderService)orderService).fulfillLastOrder("buy");
         runTestLoop(trader, 1);
         assert(trader.getOpenSellOrders().size() == 3);
-        assert(trader.getOpenSellOrders().peek().getSize().doubleValue() == 0.00713);
-        assert(trader.getOpenSellOrders().peek().getPrice().doubleValue() == 11462); 
+        assert(trader.getOpenSellOrders().peek().getSize().doubleValue() == 0.0111);
+        assert(trader.getOpenSellOrders().peek().getPrice().doubleValue() == 11582); 
 
         assert(trader.getCurrentBuyOrder() != null);
-        assert(trader.getCurrentBuyOrder().getSize().doubleValue() == 0.00645);
-        assert(trader.getCurrentBuyOrder().getPrice().doubleValue() == 11288);
+        assert(trader.getCurrentBuyOrder().getSize().doubleValue() == 0.00902);
+        assert(trader.getCurrentBuyOrder().getPrice().doubleValue() == 11347);
 
 
 
@@ -267,12 +267,12 @@ public class TraderTest
         ((TestOrderService)orderService).fulfillLastOrder("buy");
         runTestLoop(trader, 1);
         assert(trader.getOpenSellOrders().size() == 4);
-        assert(trader.getOpenSellOrders().peek().getSize().doubleValue() == 0.00645);
-        assert(trader.getOpenSellOrders().peek().getPrice().doubleValue() == 11346); 
+        assert(trader.getOpenSellOrders().peek().getSize().doubleValue() == 0.00902);
+        assert(trader.getOpenSellOrders().peek().getPrice().doubleValue() == 11462); 
 
         assert(trader.getCurrentBuyOrder() != null);
-        assert(trader.getCurrentBuyOrder().getSize().doubleValue() == 0.00587);
-        assert(trader.getCurrentBuyOrder().getPrice().doubleValue() == 11173);
+        assert(trader.getCurrentBuyOrder().getSize().doubleValue() == 0.00544);
+        assert(trader.getCurrentBuyOrder().getPrice().doubleValue() == 11288);
 
 
         
@@ -280,12 +280,12 @@ public class TraderTest
         ((TestOrderService)orderService).fulfillLastOrder("buy");
         runTestLoop(trader, 1);
         assert(trader.getOpenSellOrders().size() == 5);
-        assert(trader.getOpenSellOrders().peek().getSize().doubleValue() == 0.00587);
-        assert(trader.getOpenSellOrders().peek().getPrice().doubleValue() == 11231); 
+        assert(trader.getOpenSellOrders().peek().getSize().doubleValue() == 0.00544);
+        assert(trader.getOpenSellOrders().peek().getPrice().doubleValue() == 11346); 
 
         assert(trader.getCurrentBuyOrder() != null);
-        assert(trader.getCurrentBuyOrder().getSize().doubleValue() == 0.00539);
-        assert(trader.getCurrentBuyOrder().getPrice().doubleValue() == 10948);
+        assert(trader.getCurrentBuyOrder().getSize().doubleValue() == 0.00465);
+        assert(trader.getCurrentBuyOrder().getPrice().doubleValue() == 11230);
 
 
 
@@ -293,12 +293,12 @@ public class TraderTest
         ((TestOrderService)orderService).fulfillLastOrder("buy");
         runTestLoop(trader, 1);
         assert(trader.getOpenSellOrders().size() == 6);
-        assert(trader.getOpenSellOrders().peek().getSize().doubleValue() == 0.00539);
-        assert(trader.getOpenSellOrders().peek().getPrice().doubleValue() == 11059); 
+        assert(trader.getOpenSellOrders().peek().getSize().doubleValue() == 0.00465);
+        assert(trader.getOpenSellOrders().peek().getPrice().doubleValue() == 11288); 
 
         assert(trader.getCurrentBuyOrder() != null);
-        assert(trader.getCurrentBuyOrder().getSize().doubleValue() == 0.00487);
-        assert(trader.getCurrentBuyOrder().getPrice().doubleValue() == 10891);
+        assert(trader.getCurrentBuyOrder().getSize().doubleValue() == 0.00399);
+        assert(trader.getCurrentBuyOrder().getPrice().doubleValue() == 11116);
     }
 
 
@@ -313,11 +313,11 @@ public class TraderTest
     {
         System.out.println("Running runTestForSeriesOfBuysUsingMarketPricesToDriveNewLimits ..."); 
 
-        double[] balances = new double[] {1000, 1000, 900, 810, 729, 656.10, 590.49, 531.441};
+        double[] balances = new double[] {1000, 1000, 800, 640, 512, 409.6, 348.16, 295.936};
         AccountServiceInterface accountService = setupTestAccountService(balances);
 
-        double[] bids = new double[] {13000, 11702, 11550, 11300, 11200, 11050, 10800, 10700};
-        double[] asks = new double[] {13001, 11703, 11780, 11650, 11500, 11300, 11200, 11000};
+        double[] bids = new double[] {13000, 11702, 11000, 10850, 10676, 10600, 10525, 10400};
+        double[] asks = new double[] {13001, 11703, 11001, 10851, 10677, 10601, 10526, 10401};
         MarketDataServiceInterface marketDataService = setupTestMarketDataService(bids, asks);
         
         OrderServiceInterface orderService = setupTestOrderService(new String[][]{});
@@ -335,7 +335,7 @@ public class TraderTest
         runTestLoop(trader, 1);
         assert(trader.getOpenSellOrders().size() == 0);
         assert(trader.getCurrentBuyOrder() != null);
-        assert(trader.getCurrentBuyOrder().getSize().doubleValue() == 0.00854);
+        assert(trader.getCurrentBuyOrder().getSize().doubleValue() == 0.01709);
         assert(trader.getCurrentBuyOrder().getPrice().doubleValue() == 11700);
 
 
@@ -344,12 +344,12 @@ public class TraderTest
         ((TestOrderService)orderService).fulfillLastOrder("buy");
         runTestLoop(trader, 1);
         assert(trader.getOpenSellOrders().size() == 1);
-        assert(trader.getOpenSellOrders().peek().getSize().doubleValue() == 0.00854);
-        assert(trader.getOpenSellOrders().peek().getPrice().doubleValue() == 11782);
+        assert(trader.getOpenSellOrders().peek().getSize().doubleValue() == 0.01709);
+        assert(trader.getOpenSellOrders().peek().getPrice().doubleValue() == 11761);
 
         assert(trader.getCurrentBuyOrder() != null);
-        assert(trader.getCurrentBuyOrder().getSize().doubleValue() == 0.00779);
-        assert(trader.getCurrentBuyOrder().getPrice().doubleValue() == 11548);
+        assert(trader.getCurrentBuyOrder().getSize().doubleValue() == 0.01454);
+        assert(trader.getCurrentBuyOrder().getPrice().doubleValue() == 10998);
 
       
  
@@ -357,12 +357,12 @@ public class TraderTest
         ((TestOrderService)orderService).fulfillLastOrder("buy");
         runTestLoop(trader, 1);
         assert(trader.getOpenSellOrders().size() == 2);
-        assert(trader.getOpenSellOrders().peek().getSize().doubleValue() == 0.00779);
-        assert(trader.getOpenSellOrders().peek().getPrice().doubleValue() == 11652); 
+        assert(trader.getOpenSellOrders().peek().getSize().doubleValue() == 0.01454);
+        assert(trader.getOpenSellOrders().peek().getPrice().doubleValue() == 11055); 
 
         assert(trader.getCurrentBuyOrder() != null);
-        assert(trader.getCurrentBuyOrder().getSize().doubleValue() == 0.00716);
-        assert(trader.getCurrentBuyOrder().getPrice().doubleValue() == 11298);
+        assert(trader.getCurrentBuyOrder().getSize().doubleValue() == 0.01179);
+        assert(trader.getCurrentBuyOrder().getPrice().doubleValue() == 10848);
 
 
         
@@ -370,12 +370,12 @@ public class TraderTest
         ((TestOrderService)orderService).fulfillLastOrder("buy");
         runTestLoop(trader, 1);
         assert(trader.getOpenSellOrders().size() == 3);
-        assert(trader.getOpenSellOrders().peek().getSize().doubleValue() == 0.00716);
-        assert(trader.getOpenSellOrders().peek().getPrice().doubleValue() == 11502); 
+        assert(trader.getOpenSellOrders().peek().getSize().doubleValue() == 0.01179);
+        assert(trader.getOpenSellOrders().peek().getPrice().doubleValue() == 10904); 
 
         assert(trader.getCurrentBuyOrder() != null);
-        assert(trader.getCurrentBuyOrder().getSize().doubleValue() == 0.00651);
-        assert(trader.getCurrentBuyOrder().getPrice().doubleValue() == 11198);
+        assert(trader.getCurrentBuyOrder().getSize().doubleValue() == 0.00959);
+        assert(trader.getCurrentBuyOrder().getPrice().doubleValue() == 10674);
 
 
 
@@ -383,12 +383,12 @@ public class TraderTest
         ((TestOrderService)orderService).fulfillLastOrder("buy");
         runTestLoop(trader, 1);
         assert(trader.getOpenSellOrders().size() == 4);
-        assert(trader.getOpenSellOrders().peek().getSize().doubleValue() == 0.00651);
-        assert(trader.getOpenSellOrders().peek().getPrice().doubleValue() == 11302); 
+        assert(trader.getOpenSellOrders().peek().getSize().doubleValue() == 0.00959);
+        assert(trader.getOpenSellOrders().peek().getPrice().doubleValue() == 10783); 
 
         assert(trader.getCurrentBuyOrder() != null);
-        assert(trader.getCurrentBuyOrder().getSize().doubleValue() == 0.00593);
-        assert(trader.getCurrentBuyOrder().getPrice().doubleValue() == 11048);
+        assert(trader.getCurrentBuyOrder().getSize().doubleValue() == 0.00579);
+        assert(trader.getCurrentBuyOrder().getPrice().doubleValue() == 10598);
 
 
         
@@ -396,12 +396,12 @@ public class TraderTest
         ((TestOrderService)orderService).fulfillLastOrder("buy");
         runTestLoop(trader, 1);
         assert(trader.getOpenSellOrders().size() == 5);
-        assert(trader.getOpenSellOrders().peek().getSize().doubleValue() == 0.00593);
-        assert(trader.getOpenSellOrders().peek().getPrice().doubleValue() == 11202); 
+        assert(trader.getOpenSellOrders().peek().getSize().doubleValue() == 0.00579);
+        assert(trader.getOpenSellOrders().peek().getPrice().doubleValue() == 10653); 
 
         assert(trader.getCurrentBuyOrder() != null);
-        assert(trader.getCurrentBuyOrder().getSize().doubleValue() == 0.00546);
-        assert(trader.getCurrentBuyOrder().getPrice().doubleValue() == 10798);
+        assert(trader.getCurrentBuyOrder().getSize().doubleValue() == 0.00496);
+        assert(trader.getCurrentBuyOrder().getPrice().doubleValue() == 10523);
 
 
 
@@ -409,12 +409,12 @@ public class TraderTest
         ((TestOrderService)orderService).fulfillLastOrder("buy");
         runTestLoop(trader, 1);
         assert(trader.getOpenSellOrders().size() == 6);
-        assert(trader.getOpenSellOrders().peek().getSize().doubleValue() == 0.00546);
-        assert(trader.getOpenSellOrders().peek().getPrice().doubleValue() == 11002); 
+        assert(trader.getOpenSellOrders().peek().getSize().doubleValue() == 0.00496);
+        assert(trader.getOpenSellOrders().peek().getPrice().doubleValue() == 10578); 
 
         assert(trader.getCurrentBuyOrder() != null);
-        assert(trader.getCurrentBuyOrder().getSize().doubleValue() == 0.00496);
-        assert(trader.getCurrentBuyOrder().getPrice().doubleValue() == 10698);
+        assert(trader.getCurrentBuyOrder().getSize().doubleValue() == 0.00426);
+        assert(trader.getCurrentBuyOrder().getPrice().doubleValue() == 10398);
     }
 
 
@@ -457,7 +457,7 @@ public class TraderTest
         assert(trader.getOpenSellOrders().size() == 0);
 
         assert(trader.getCurrentBuyOrder() != null);
-        assert(trader.getCurrentBuyOrder().getSize().doubleValue() == 0.00773);
+        assert(trader.getCurrentBuyOrder().getSize().doubleValue() == 0.01546);
         assert(trader.getCurrentBuyOrder().getPrice().doubleValue() == 12933);
     }
 
@@ -474,11 +474,11 @@ public class TraderTest
     {
         System.out.println("Running runTestForSeriesOfBuysThenASellUsingPricesOfPreviousOrdersToDriveNewLimits ..."); 
 
-        double[] balances = new double[] {1000, 1000, 900, 810, 900};
+        double[] balances = new double[] {1000, 1000, 800, 640, 900};
         AccountServiceInterface accountService = setupTestAccountService(balances);
 
-        double[] bids = new double[] {13000, 11702, 11702, 11582, 11584};
-        double[] asks = new double[] {13001, 11703, 11703, 11583, 11585};
+        double[] bids = new double[] {13000, 11702, 11702, 11582, 11701};
+        double[] asks = new double[] {13001, 11703, 11703, 11583, 11702};
         MarketDataServiceInterface marketDataService = setupTestMarketDataService(bids, asks);
         
         OrderServiceInterface orderService = setupTestOrderService(new String[][]{});
@@ -496,24 +496,24 @@ public class TraderTest
         }
 
         assert(trader.getOpenSellOrders().size() == 2);
-        assert(trader.getOpenSellOrders().peek().getSize().doubleValue() == 0.00777);
-        assert(trader.getOpenSellOrders().peek().getPrice().doubleValue() == 11641); 
+        assert(trader.getOpenSellOrders().peek().getSize().doubleValue() == 0.01374);
+        assert(trader.getOpenSellOrders().peek().getPrice().doubleValue() == 11700); 
 
         assert(trader.getCurrentBuyOrder() != null);
-        assert(trader.getCurrentBuyOrder().getSize().doubleValue() == 0.00713);
-        assert(trader.getCurrentBuyOrder().getPrice().doubleValue() == 11347);
+        assert(trader.getCurrentBuyOrder().getSize().doubleValue() == 0.0111);
+        assert(trader.getCurrentBuyOrder().getPrice().doubleValue() == 11522);
 
 
         // Iteration 5
         ((TestOrderService)orderService).fulfillLastOrder("sell");
         runTestLoop(trader, 1);
         assert(trader.getOpenSellOrders().size() == 1);
-        assert(trader.getOpenSellOrders().peek().getSize().doubleValue() == 0.00854);
+        assert(trader.getOpenSellOrders().peek().getSize().doubleValue() == 0.01709);
         assert(trader.getOpenSellOrders().peek().getPrice().doubleValue() == 11761);
 
         assert(trader.getCurrentBuyOrder() != null);
-        assert(trader.getCurrentBuyOrder().getSize().doubleValue() == 0.00777);
-        assert(trader.getCurrentBuyOrder().getPrice().doubleValue() == 11581);
+        assert(trader.getCurrentBuyOrder().getSize().doubleValue() == 0.01546);
+        assert(trader.getCurrentBuyOrder().getPrice().doubleValue() == 11640);
     }
 
 
@@ -529,11 +529,11 @@ public class TraderTest
     {
         System.out.println("Running runTestForSeriesOfBuysThenASellUsingMarketPricesToDriveNewLimits ..."); 
 
-        double[] balances = new double[] {1000, 1000, 900, 810, 900};
+        double[] balances = new double[] {1000, 1000, 800, 640, 900};
         AccountServiceInterface accountService = setupTestAccountService(balances);
 
-        double[] bids = new double[] {13000, 11702, 11702, 11582, 11000};
-        double[] asks = new double[] {13001, 11703, 11703, 11583, 11001};
+        double[] bids = new double[] {13000, 11702, 11600, 11550, 11584};
+        double[] asks = new double[] {13001, 11703, 11601, 11551, 11585};
         MarketDataServiceInterface marketDataService = setupTestMarketDataService(bids, asks);
         
         OrderServiceInterface orderService = setupTestOrderService(new String[][]{});
@@ -551,24 +551,24 @@ public class TraderTest
         }
 
         assert(trader.getOpenSellOrders().size() == 2);
-        assert(trader.getOpenSellOrders().peek().getSize().doubleValue() == 0.00777);
-        assert(trader.getOpenSellOrders().peek().getPrice().doubleValue() == 11641); 
+        assert(trader.getOpenSellOrders().peek().getSize().doubleValue() == 0.01379);
+        assert(trader.getOpenSellOrders().peek().getPrice().doubleValue() == 11658); 
 
         assert(trader.getCurrentBuyOrder() != null);
-        assert(trader.getCurrentBuyOrder().getSize().doubleValue() == 0.00713);
-        assert(trader.getCurrentBuyOrder().getPrice().doubleValue() == 11347);
+        assert(trader.getCurrentBuyOrder().getSize().doubleValue() == 0.01114);
+        assert(trader.getCurrentBuyOrder().getPrice().doubleValue() == 11480);
 
 
         // Iteration 5
         ((TestOrderService)orderService).fulfillLastOrder("sell");
         runTestLoop(trader, 1);
         assert(trader.getOpenSellOrders().size() == 1);
-        assert(trader.getOpenSellOrders().peek().getSize().doubleValue() == 0.00854);
+        assert(trader.getOpenSellOrders().peek().getSize().doubleValue() == 0.01709);
         assert(trader.getOpenSellOrders().peek().getPrice().doubleValue() == 11761);
 
         assert(trader.getCurrentBuyOrder() != null);
-        assert(trader.getCurrentBuyOrder().getSize().doubleValue() == 0.00818);
-        assert(trader.getCurrentBuyOrder().getPrice().doubleValue() == 10998);
+        assert(trader.getCurrentBuyOrder().getSize().doubleValue() == 0.01554);
+        assert(trader.getCurrentBuyOrder().getPrice().doubleValue() == 11582);
     }
 
 
